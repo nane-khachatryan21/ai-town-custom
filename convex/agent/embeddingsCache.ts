@@ -3,15 +3,33 @@ import { ActionCtx, internalMutation, internalQuery } from '../_generated/server
 import { internal } from '../_generated/api';
 import { Id } from '../_generated/dataModel';
 import { fetchEmbeddingBatch } from '../util/llm';
+import { GameId } from '../aiTown/ids';
 
 const selfInternal = internal.agent.embeddingsCache;
 
-export async function fetch(ctx: ActionCtx, text: string) {
-  const result = await fetchBatch(ctx, [text]);
+export async function fetch(
+  ctx: ActionCtx,
+  text: string,
+  type: 'query' | 'passage' = 'passage',
+) {
+  const result = await fetchBatch(ctx, [text], type);
   return result.embeddings[0];
 }
 
-export async function fetchBatch(ctx: ActionCtx, texts: string[]) {
+export async function fetchConversationEmbedding(
+  ctx: ActionCtx,
+  playerId: GameId<'players'>,
+  text: string,
+) {
+  const embedding = await fetch(ctx, text, 'query');
+  return embedding;
+}
+
+export async function fetchBatch(
+  ctx: ActionCtx,
+  texts: string[],
+  type: 'query' | 'passage' = 'passage',
+) {
   const start = Date.now();
 
   const textHashes = await Promise.all(texts.map((text) => hashText(text)));
@@ -26,7 +44,7 @@ export async function fetchBatch(ctx: ActionCtx, texts: string[]) {
   if (cacheResults.length < texts.length) {
     const missingIndexes = [...results.keys()].filter((i) => !results[i]);
     const missingTexts = missingIndexes.map((i) => texts[i]);
-    const response = await fetchEmbeddingBatch(missingTexts);
+    const response = await fetchEmbeddingBatch(missingTexts, type);
     if (response.embeddings.length !== missingIndexes.length) {
       throw new Error(
         `Expected ${missingIndexes.length} embeddings, got ${response.embeddings.length}`,
@@ -51,7 +69,7 @@ export async function fetchBatch(ctx: ActionCtx, texts: string[]) {
   };
 }
 
-async function hashText(text: string) {
+async function hashText(text: string): Promise<ArrayBuffer> {
   const textEncoder = new TextEncoder();
   const buf = textEncoder.encode(text);
   if (typeof crypto === 'undefined') {
@@ -60,11 +78,26 @@ async function hashText(text: string) {
     const crypto = (await import(f())) as typeof import('crypto');
     const hash = crypto.createHash('sha256');
     hash.update(buf);
-    return hash.digest().buffer;
+    return hash.digest().buffer as ArrayBuffer;
   } else {
     return await crypto.subtle.digest('SHA-256', buf);
   }
 }
+
+export const get = internalQuery({
+  args: { text: v.string() },
+  handler: async (ctx, args) => {
+    const textHash = await hashText(args.text);
+    const result = await ctx.db
+      .query('embeddingsCache')
+      .withIndex('text', (q) => q.eq('textHash', textHash))
+      .first();
+    if (!result) {
+      return null;
+    }
+    return result.embedding;
+  },
+});
 
 export const getEmbeddingsByText = internalQuery({
   args: { textHashes: v.array(v.bytes()) },
@@ -77,7 +110,7 @@ export const getEmbeddingsByText = internalQuery({
       const textHash = args.textHashes[i];
       const result = await ctx.db
         .query('embeddingsCache')
-        .withIndex('text', (q) => q.eq('textHash', textHash))
+        .withIndex('text', (q) => q.eq('textHash', textHash as ArrayBuffer))
         .first();
       if (result) {
         out.push({
@@ -88,6 +121,20 @@ export const getEmbeddingsByText = internalQuery({
       }
     }
     return out;
+  },
+});
+
+export const add = internalMutation({
+  args: {
+    text: v.string(),
+    embedding: v.array(v.float64()),
+  },
+  handler: async (ctx, args): Promise<Id<'embeddingsCache'>> => {
+    const textHash = await hashText(args.text);
+    return await ctx.db.insert('embeddingsCache', {
+      textHash,
+      embedding: args.embedding,
+    });
   },
 });
 
@@ -103,7 +150,12 @@ export const writeEmbeddings = internalMutation({
   handler: async (ctx, args): Promise<Id<'embeddingsCache'>[]> => {
     const ids = [];
     for (const embedding of args.embeddings) {
-      ids.push(await ctx.db.insert('embeddingsCache', embedding));
+      ids.push(
+        await ctx.db.insert('embeddingsCache', {
+          ...embedding,
+          textHash: embedding.textHash as ArrayBuffer,
+        }),
+      );
     }
     return ids;
   },

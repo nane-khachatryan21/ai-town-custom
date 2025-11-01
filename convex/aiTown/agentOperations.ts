@@ -69,7 +69,7 @@ export const agentGenerateMessage = internalAction({
       default:
         assertNever(args.type);
     }
-    const completion = await completionFn(
+    const text = await completionFn(
       ctx,
       args.worldId,
       args.conversationId as GameId<'conversations'>,
@@ -77,7 +77,6 @@ export const agentGenerateMessage = internalAction({
       args.otherPlayerId as GameId<'players'>,
     );
     // TODO: stream in the text instead of reading it all at once.
-    const text = await completion.readAll();
 
     await ctx.runMutation(internal.aiTown.agent.agentSendMessage, {
       worldId: args.worldId,

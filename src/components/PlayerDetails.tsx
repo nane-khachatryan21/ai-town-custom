@@ -223,7 +223,7 @@ export default function PlayerDetails({
       )}
       <div className="desc my-6">
         <p className="leading-tight -m-4 bg-brown-700 text-base sm:text-sm">
-          {!isMe && playerDescription?.description}
+          {!isMe && playerDescription?.description.split(' ').slice(0, 10).join(' ')}
           {isMe && <i>This is you!</i>}
           {!isMe && inConversationWithMe && (
             <>

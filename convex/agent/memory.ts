@@ -42,10 +42,9 @@ export async function rememberConversation(
   const llmMessages: LLMMessage[] = [
     {
       role: 'user',
-      content: `你是${player.name}，刚与${otherPlayer.name} 结束了一次谈话。 我希望你能从 ${player.name} 的角度总结这次对话，使用第一人称代词”我”，并说明你喜欢或不喜欢这次交流。`,
-      // content: `You are ${player.name}, and you just finished a conversation with ${otherPlayer.name}. I would
-      // like you to summarize the conversation from ${player.name}'s perspective, using first-person pronouns like
-      // "I," and add if you liked or disliked this interaction.`,
+      content: `You are ${player.name}, and you just finished a conversation with ${otherPlayer.name}. I would
+      like you to summarize the conversation from ${player.name}'s perspective, using first-person pronouns like
+      "I," and add if you liked or disliked this interaction.`,
     },
   ];
   const authors = new Set<GameId<'players'>>();

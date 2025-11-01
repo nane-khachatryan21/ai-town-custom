@@ -122,12 +122,15 @@ export const agentInputs = {
     },
     handler: (game, now, args) => {
       const description = Descriptions[args.descriptionIndex];
+      const identity = description.identity ?? `I am ${description.name}.`;
+      const plan = description.plan ?? 'no plan';
+      // console.log(`Creating agent "${description.name}" with identity: "${identity}" and plan: "${plan}"`);
       const playerId = Player.join(
         game,
         now,
         description.name,
         description.character,
-        description.identity,
+        identity,
       );
       const agentId = game.allocId('agents');
       game.world.agents.set(
@@ -145,8 +148,8 @@ export const agentInputs = {
         agentId,
         new AgentDescription({
           agentId: agentId,
-          identity: description.identity,
-          plan: description.plan,
+          identity: identity,
+          plan: plan,
         }),
       );
       return { agentId };

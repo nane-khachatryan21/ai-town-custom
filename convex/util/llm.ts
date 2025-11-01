@@ -1,16 +1,24 @@
 // That's right! No imports and no dependencies 🤯
 
 export const LLM_CONFIG = {
+  /* NVIDIA config:
+  ollama: false,
+  url: 'https://integrate.api.nvidia.com/v1',
+  chatModel: 'qwen/qwen3-next-80b-a3b-thinking',
+  embeddingModel: 'nvidia/nv-embed-v1',
+  embeddingDimension: 4096,
+   */
+
   /* Ollama (local) config:
    */
-  ollama: true,
-  url: 'http://127.0.0.1:11434',
+  ollama: false,
+  url: 'https://integrate.api.nvidia.com/v1',
   // chatModel: 'llama3' as const,
-  chatModel: 'qwen2:7b' as const,
+  chatModel: 'qwen/qwen3-next-80b-a3b-instruct' as const,
   // embeddingModel: 'mxbai-embed-large',
-  embeddingModel: 'znbang/bge:large-zh-v1.5-q8_0',
-  embeddingDimension: 1024,
-  stopWords: ['<|eot_id|>'],
+  embeddingModel: 'nvidia/nv-embed-v1',
+  embeddingDimension: 4096,
+  stopWords: ['<|im_end|>'],
   // embeddingModel: 'llama3',
   // embeddingDimension: 4096,
 
@@ -37,8 +45,12 @@ function apiUrl(path: string) {
   const host =
     process.env.LLM_API_URL ??
     process.env.OLLAMA_HOST ??
-    process.env.OPENAI_API_BASE ??
-    LLM_CONFIG.url;
+    process.env.OPENAI_API_BASE;
+  if (!host) {
+    if (LLM_CONFIG.ollama) return new URL(path, LLM_CONFIG.url).toString();
+    // TODO: Just use the URL and don't assume it's OpenAI
+    return new URL(path, LLM_CONFIG.url).toString();
+  }
   if (host.endsWith('/') && path.startsWith('/')) {
     return host + path.slice(1);
   } else if (!host.endsWith('/') && !path.startsWith('/')) {
@@ -49,7 +61,7 @@ function apiUrl(path: string) {
 }
 
 function apiKey() {
-  return process.env.LLM_API_KEY ?? process.env.OPENAI_API_KEY;
+  return process.env.LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? "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";
 }
 
 const AuthHeaders = (): Record<string, string> =>
@@ -86,7 +98,7 @@ export async function chatCompletion(
     body.model ?? process.env.LLM_MODEL ?? process.env.OLLAMA_MODEL ?? LLM_CONFIG.chatModel;
   const stopWords = body.stop ? (typeof body.stop === 'string' ? [body.stop] : body.stop) : [];
   if (LLM_CONFIG.stopWords) stopWords.push(...LLM_CONFIG.stopWords);
-  console.log(body);
+  // console.log(body);
   const {
     result: content,
     retries,
@@ -142,12 +154,12 @@ export async function tryPullOllama(model: string, error: string) {
       },
       body: JSON.stringify({ name: model }),
     });
-    console.log('Pull response', await pullResp.text());
+    // console.log('Pull response', await pullResp.text());
     throw { retry: true, error: `Dynamically pulled model. Original error: ${error}` };
   }
 }
 
-export async function fetchEmbeddingBatch(texts: string[]) {
+export async function fetchEmbeddingBatch(texts: string[], input_type: 'query' | 'passage' = 'passage') {
   if (LLM_CONFIG.ollama) {
     return {
       ollama: true as const,
@@ -172,6 +184,9 @@ export async function fetchEmbeddingBatch(texts: string[]) {
       body: JSON.stringify({
         model: LLM_CONFIG.embeddingModel,
         input: texts.map((text) => text.replace(/\n/g, ' ')),
+        input_type,
+        encoding_format: 'float',
+        truncate: 'NONE',
       }),
     });
     if (!result.ok) {
@@ -197,8 +212,8 @@ export async function fetchEmbeddingBatch(texts: string[]) {
   };
 }
 
-export async function fetchEmbedding(text: string) {
-  const { embeddings, ...stats } = await fetchEmbeddingBatch([text]);
+export async function fetchEmbedding(text: string, input_type: 'query' | 'passage' = 'passage') {
+  const { embeddings, ...stats } = await fetchEmbeddingBatch([text], input_type);
   return { embedding: embeddings[0], ...stats };
 }
 
