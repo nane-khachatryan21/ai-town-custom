@@ -7,6 +7,7 @@ import { api, internal } from '../_generated/api';
 import * as embeddingsCache from './embeddingsCache';
 import { GameId, conversationId, playerId } from '../aiTown/ids';
 import { NUM_MEMORIES_TO_SEARCH } from '../constants';
+import { moderateContent, getSafeResponse } from '../util/guardrails';
 
 const selfInternal = internal.agent.conversation;
 
@@ -26,6 +27,25 @@ export async function startConversationMessage(
       conversationId,
     },
   );
+
+  // Check if there are any messages in this conversation yet (in case human started it)
+  const prevMessages = await ctx.runQuery(api.messages.listMessages, { worldId, conversationId });
+  const lastOtherPlayerMessage = [...prevMessages]
+    .reverse()
+    .find((msg) => msg.author === otherPlayerId);
+
+  // Apply content guardrails if human initiated the conversation with a message
+  if (lastOtherPlayerMessage) {
+    console.log(`[Guardrails] Checking initial message from ${otherPlayer.name}: "${lastOtherPlayerMessage.text}"`);
+    const moderationResult = await moderateContent(lastOtherPlayerMessage.text);
+    
+    if (!moderationResult.isSafe) {
+      console.log(`[Guardrails] Content flagged as ${moderationResult.category}: ${moderationResult.reason}`);
+      return getSafeResponse(moderationResult.category, moderationResult.reason);
+    }
+    console.log('[Guardrails] Content passed moderation check');
+  }
+
   const embedding = await embeddingsCache.fetch(
     ctx,
     `${player.name} is talking to ${otherPlayer.name}`,
@@ -84,6 +104,27 @@ export async function continueConversationMessage(
       conversationId,
     },
   );
+
+  // Get the conversation messages to check the last message from the other player
+  const prevMessages = await ctx.runQuery(api.messages.listMessages, { worldId, conversationId });
+  
+  // Find the most recent message from the other player (human)
+  const lastOtherPlayerMessage = [...prevMessages]
+    .reverse()
+    .find((msg) => msg.author === otherPlayerId);
+
+  // Apply content guardrails if there's a message from the other player
+  if (lastOtherPlayerMessage) {
+    console.log(`[Guardrails] Checking message from ${otherPlayer.name}: "${lastOtherPlayerMessage.text}"`);
+    const moderationResult = await moderateContent(lastOtherPlayerMessage.text);
+    
+    if (!moderationResult.isSafe) {
+      console.log(`[Guardrails] Content flagged as ${moderationResult.category}: ${moderationResult.reason}`);
+      return getSafeResponse(moderationResult.category, moderationResult.reason);
+    }
+    console.log('[Guardrails] Content passed moderation check');
+  }
+
   const now = Date.now();
   const started = new Date(conversation.created);
   const embedding = await embeddingsCache.fetch(

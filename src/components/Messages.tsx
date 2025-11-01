@@ -6,6 +6,7 @@ import { MessageInput } from './MessageInput';
 import { Player } from '../../convex/aiTown/player';
 import { Conversation } from '../../convex/aiTown/conversation';
 import { useEffect, useRef } from 'react';
+import { HighlightedMessage } from './HighlightedMessage';
 
 export function Messages({
   worldId,
@@ -68,7 +69,14 @@ export function Messages({
   if (messages.length === 0 && !inConversationWithMe) {
     return null;
   }
-  const messageNodes: { time: number; node: React.ReactNode }[] = messages.map((m) => {
+  const messageNodes: { time: number; node: React.ReactNode }[] = messages.map((m, index) => {
+    // Get all previous messages as context for verbatim detection
+    // Only check messages from OTHER participants (not the current author)
+    const contextMessages = messages
+      .slice(0, index)
+      .filter((prevMsg) => prevMsg.author !== m.author)
+      .map((prevMsg) => prevMsg.text);
+
     const node = (
       <div key={`text-${m._id}`} className="leading-tight mb-6">
         <div className="flex gap-4">
@@ -78,7 +86,12 @@ export function Messages({
           </time>
         </div>
         <div className={clsx('bubble', m.author === humanPlayerId && 'bubble-mine')}>
-          <p className="bg-white -mx-3 -my-1">{m.text}</p>
+          <HighlightedMessage
+            text={m.text}
+            contextMessages={contextMessages}
+            authorName={m.authorName}
+            showHighlights={m.author !== humanPlayerId} // Only highlight AI messages, not human
+          />
         </div>
       </div>
     );

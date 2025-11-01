@@ -6,7 +6,7 @@ import { data as f5SpritesheetData } from './spritesheets/f5';
 import { data as f6SpritesheetData } from './spritesheets/f6';
 import { data as f7SpritesheetData } from './spritesheets/f7';
 import { data as f8SpritesheetData } from './spritesheets/f8';
-import deputyData from '../../prompts_deputies.json';
+import deputyData from '../prompts_deputies.json';
 
 // console.log('Loaded deputyData:', deputyData);
 
