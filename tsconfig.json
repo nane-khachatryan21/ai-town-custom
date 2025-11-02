@@ -24,6 +24,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.json", "postcss.config.js"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.json", "postcss.config.js", "types.d.ts"],
   "exclude": ["node_modules"]
 }
