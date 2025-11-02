@@ -162,7 +162,7 @@ export const characters = deputyEntries.map(([name, data], index) => {
   const character = availableCharacters[index % availableCharacters.length];
   return {
     name: character.name,
-    textureUrl: '/ai-town/assets/32x32folk.png',
+    textureUrl: '/assets/32x32folk.png',
     spritesheetData: character.data,
     speed: 0.1,
   };
