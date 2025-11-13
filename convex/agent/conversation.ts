@@ -6,19 +6,25 @@ import * as memory from './memory';
 import { api, internal } from '../_generated/api';
 import * as embeddingsCache from './embeddingsCache';
 import { GameId, conversationId, playerId } from '../aiTown/ids';
-import { NUM_MEMORIES_TO_SEARCH } from '../constants';
+import { NUM_MEMORIES_TO_SEARCH, WEB_SEARCH_ENABLED_LOCAL } from '../constants';
 import { moderateContent, getSafeResponse } from '../util/guardrails';
 import { performWebSearch, filterAndFormatResults } from '../util/webSearch';
 
 const selfInternal = internal.agent.conversation;
 
 /**
- * Check if web search is enabled via environment variable
- * Note: This can only be called from actions, not from schema files
+ * Check if web search is enabled
+ * - For local backend: Uses WEB_SEARCH_ENABLED_LOCAL constant (env vars don't work)
+ * - For cloud deployment: Uses ENABLE_WEB_SEARCH environment variable
  */
 function isWebSearchEnabled(): boolean {
   const envValue = process.env['ENABLE_WEB_SEARCH'];
-  return envValue === 'true';
+  // If env var is explicitly set (cloud deployment), use it
+  if (envValue !== undefined) {
+    return envValue === 'true';
+  }
+  // Otherwise use local constant (local backend doesn't support env vars)
+  return WEB_SEARCH_ENABLED_LOCAL;
 }
 
 /**

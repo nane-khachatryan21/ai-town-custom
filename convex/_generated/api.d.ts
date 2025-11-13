@@ -43,6 +43,7 @@ import type * as http from "../http.js";
 import type * as init from "../init.js";
 import type * as messages from "../messages.js";
 import type * as music from "../music.js";
+import type * as testEnv from "../testEnv.js";
 import type * as testGuardrails from "../testGuardrails.js";
 import type * as testWebSearch from "../testWebSearch.js";
 import type * as testing from "../testing.js";
@@ -101,6 +102,7 @@ declare const fullApi: ApiFromModules<{
   init: typeof init;
   messages: typeof messages;
   music: typeof music;
+  testEnv: typeof testEnv;
   testGuardrails: typeof testGuardrails;
   testWebSearch: typeof testWebSearch;
   testing: typeof testing;

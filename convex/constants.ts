@@ -76,3 +76,9 @@ export const ENGINE_ACTION_DURATION = 30000;
 export const MAX_PATHFINDS_PER_STEP = 16;
 
 export const DEFAULT_NAME = 'Me';
+
+// Web search configuration
+// NOTE: The local Convex backend doesn't support environment variables
+// For local development, change this constant to enable/disable web search
+// For production (Convex Cloud), this will be automatically set via ENABLE_WEB_SEARCH env var
+export const WEB_SEARCH_ENABLED_LOCAL = true;
