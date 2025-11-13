@@ -6,11 +6,20 @@ import * as memory from './memory';
 import { api, internal } from '../_generated/api';
 import * as embeddingsCache from './embeddingsCache';
 import { GameId, conversationId, playerId } from '../aiTown/ids';
-import { NUM_MEMORIES_TO_SEARCH, ENABLE_WEB_SEARCH } from '../constants';
+import { NUM_MEMORIES_TO_SEARCH } from '../constants';
 import { moderateContent, getSafeResponse } from '../util/guardrails';
 import { performWebSearch, filterAndFormatResults } from '../util/webSearch';
 
 const selfInternal = internal.agent.conversation;
+
+/**
+ * Check if web search is enabled via environment variable
+ * Note: This can only be called from actions, not from schema files
+ */
+function isWebSearchEnabled(): boolean {
+  const envValue = process.env['ENABLE_WEB_SEARCH'];
+  return envValue === 'true';
+}
 
 /**
  * Detects if the agent's response indicates they cannot answer the question
@@ -153,7 +162,7 @@ export async function startConversationMessage(
   
   // Two-step system: First check if web search is needed
   let webSearchContext = '';
-  if (ENABLE_WEB_SEARCH && lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
+  if (isWebSearchEnabled() && lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
     console.log(`\n${'='.repeat(80)}`);
     console.log(`[WebSearch] 🤔 TWO-STEP SYSTEM: Evaluating if web search is needed`);
     console.log(`[WebSearch] Context: Starting conversation`);
@@ -189,8 +198,8 @@ export async function startConversationMessage(
       console.error(`[WebSearch] Continuing without web context`);
     }
     console.log(`${'='.repeat(80)}\n`);
-  } else if (!ENABLE_WEB_SEARCH && lastOtherPlayerMessage) {
-    console.log(`\n[WebSearch] ⚠️ Web search is DISABLED (set ENABLE_WEB_SEARCH=true to enable)\n`);
+  } else if (!isWebSearchEnabled() && lastOtherPlayerMessage) {
+    console.log(`\n[WebSearch] ⚠️ Web search is DISABLED (set isWebSearchEnabled()=true to enable)\n`);
   }
   
   const prompt = [
@@ -222,7 +231,7 @@ export async function startConversationMessage(
   });
   
   // Fallback: If agent says they can't answer, try with web search
-  if (ENABLE_WEB_SEARCH && !webSearchContext && detectCannotAnswerResponse(content)) {
+  if (isWebSearchEnabled() && !webSearchContext && detectCannotAnswerResponse(content)) {
     console.log(`\n${'='.repeat(80)}`);
     console.log(`[WebSearch] 🔄 FALLBACK MECHANISM TRIGGERED`);
     console.log(`[WebSearch] Agent response indicated inability to answer`);
@@ -333,7 +342,7 @@ export async function continueConversationMessage(
   
   // Two-step system: First check if web search is needed
   let webSearchContext = '';
-  if (ENABLE_WEB_SEARCH && lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
+  if (isWebSearchEnabled() && lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
     console.log(`\n${'='.repeat(80)}`);
     console.log(`[WebSearch] 🤔 TWO-STEP SYSTEM: Evaluating if web search is needed`);
     console.log(`[WebSearch] Context: Continuing conversation`);
@@ -369,8 +378,8 @@ export async function continueConversationMessage(
       console.error(`[WebSearch] Continuing without web context`);
     }
     console.log(`${'='.repeat(80)}\n`);
-  } else if (!ENABLE_WEB_SEARCH && lastOtherPlayerMessage) {
-    console.log(`\n[WebSearch] ⚠️ Web search is DISABLED (set ENABLE_WEB_SEARCH=true to enable)\n`);
+  } else if (!isWebSearchEnabled() && lastOtherPlayerMessage) {
+    console.log(`\n[WebSearch] ⚠️ Web search is DISABLED (set isWebSearchEnabled()=true to enable)\n`);
   }
   
   const prompt = [
@@ -410,7 +419,7 @@ export async function continueConversationMessage(
   });
   
   // Fallback: If agent says they can't answer, try with web search
-  if (ENABLE_WEB_SEARCH && !webSearchContext && detectCannotAnswerResponse(content)) {
+  if (isWebSearchEnabled() && !webSearchContext && detectCannotAnswerResponse(content)) {
     console.log(`\n${'='.repeat(80)}`);
     console.log(`[WebSearch] 🔄 FALLBACK MECHANISM TRIGGERED`);
     console.log(`[WebSearch] Agent response indicated inability to answer`);
