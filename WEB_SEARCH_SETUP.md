@@ -6,6 +6,8 @@ The web search feature allows agents to search the web when questions are outsid
 
 Web search is **DISABLED by default** for local development because the local Convex backend may have network restrictions that prevent fetch from working properly.
 
+**Important**: The `ENABLE_WEB_SEARCH` environment variable is checked at runtime in Convex actions only (not during schema evaluation), so it won't cause any schema validation errors.
+
 ## How to Enable
 
 ### For Production (Vercel + Convex Cloud)
