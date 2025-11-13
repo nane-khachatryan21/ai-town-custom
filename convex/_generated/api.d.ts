@@ -44,6 +44,7 @@ import type * as init from "../init.js";
 import type * as messages from "../messages.js";
 import type * as music from "../music.js";
 import type * as testGuardrails from "../testGuardrails.js";
+import type * as testWebSearch from "../testWebSearch.js";
 import type * as testing from "../testing.js";
 import type * as util_FastIntegerCompression from "../util/FastIntegerCompression.js";
 import type * as util_assertNever from "../util/assertNever.js";
@@ -58,6 +59,7 @@ import type * as util_minheap from "../util/minheap.js";
 import type * as util_object from "../util/object.js";
 import type * as util_sleep from "../util/sleep.js";
 import type * as util_types from "../util/types.js";
+import type * as util_webSearch from "../util/webSearch.js";
 import type * as util_xxhash from "../util/xxhash.js";
 import type * as world from "../world.js";
 
@@ -100,6 +102,7 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   music: typeof music;
   testGuardrails: typeof testGuardrails;
+  testWebSearch: typeof testWebSearch;
   testing: typeof testing;
   "util/FastIntegerCompression": typeof util_FastIntegerCompression;
   "util/assertNever": typeof util_assertNever;
@@ -114,6 +117,7 @@ declare const fullApi: ApiFromModules<{
   "util/object": typeof util_object;
   "util/sleep": typeof util_sleep;
   "util/types": typeof util_types;
+  "util/webSearch": typeof util_webSearch;
   "util/xxhash": typeof util_xxhash;
   world: typeof world;
 }>;

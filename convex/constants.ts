@@ -76,3 +76,6 @@ export const ENGINE_ACTION_DURATION = 30000;
 export const MAX_PATHFINDS_PER_STEP = 16;
 
 export const DEFAULT_NAME = 'Me';
+
+// Web search configuration
+export const ENABLE_WEB_SEARCH = process.env.ENABLE_WEB_SEARCH === 'true';

@@ -145,15 +145,17 @@ export const agentDoSomething = internalAction({
         return;
       }
     }
-    const invitee =
-      justLeftConversation || recentlyAttemptedInvite
-        ? undefined
-        : await ctx.runQuery(internal.aiTown.agent.findConversationCandidate, {
-            now,
-            worldId: args.worldId,
-            player: args.player,
-            otherFreePlayers: args.otherFreePlayers,
-          });
+    // Disable agent-to-agent conversations - agents only respond to user-initiated conversations
+    const invitee = undefined;
+    // const invitee =
+    //   justLeftConversation || recentlyAttemptedInvite
+    //     ? undefined
+    //     : await ctx.runQuery(internal.aiTown.agent.findConversationCandidate, {
+    //         now,
+    //         worldId: args.worldId,
+    //         player: args.player,
+    //         otherFreePlayers: args.otherFreePlayers,
+    //       });
 
     // TODO: We hit a lot of OCC errors on sending inputs in this file. It's
     // easy for them to get scheduled at the same time and line up in time.

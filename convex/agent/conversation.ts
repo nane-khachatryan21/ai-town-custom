@@ -6,10 +6,98 @@ import * as memory from './memory';
 import { api, internal } from '../_generated/api';
 import * as embeddingsCache from './embeddingsCache';
 import { GameId, conversationId, playerId } from '../aiTown/ids';
-import { NUM_MEMORIES_TO_SEARCH } from '../constants';
+import { NUM_MEMORIES_TO_SEARCH, ENABLE_WEB_SEARCH } from '../constants';
 import { moderateContent, getSafeResponse } from '../util/guardrails';
+import { performWebSearch, filterAndFormatResults } from '../util/webSearch';
 
 const selfInternal = internal.agent.conversation;
+
+/**
+ * Detects if the agent's response indicates they cannot answer the question
+ * @param response The agent's response
+ * @returns true if the response indicates inability to answer
+ */
+function detectCannotAnswerResponse(response: string): boolean {
+  const cannotAnswerPatterns = [
+    // English patterns
+    /outside\s+(my|of\s+my)\s+(competenc|expertise|knowledge|scope)/i,
+    /beyond\s+(my|of\s+my)\s+(competenc|expertise|knowledge|scope)/i,
+    /don'?t\s+have\s+(enough\s+)?(information|knowledge|data)/i,
+    /can'?t\s+(answer|help|provide\s+information)/i,
+    /unable\s+to\s+(answer|help|provide)/i,
+    /not\s+(qualified|able|equipped)\s+to\s+(answer|help)/i,
+    /lack\s+the\s+(information|knowledge|expertise)/i,
+    /need\s+(more|additional|external)\s+(information|data|knowledge)/i,
+    /would\s+need\s+to\s+(research|look\s+up|search)/i,
+    
+    // Armenian patterns (Այդ հարցը դուրս է իմ լիազորությունների...)
+    /դուրս\s+է\s+(իմ\s+)?(լիազորությունների|գիտելիքների|իմացության)/i,
+    /չեմ\s+կարող\s+պատասխանել/i,
+    /բավարար\s+տեղեկություններ\s+չունեմ/i,
+    /անհրաժեշտ\s+է\s+(հետազոտել|որոնել)/i,
+    
+    // Russian patterns
+    /вне\s+(моей|моих)\s+(компетенции|знаний)/i,
+    /не\s+могу\s+ответить/i,
+    /недостаточно\s+информации/i,
+  ];
+  
+  for (const pattern of cannotAnswerPatterns) {
+    if (pattern.test(response)) {
+      console.log(`[WebSearch] 🚨 Detected "cannot answer" pattern: ${pattern.source}`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Determines if the agent needs web search to answer the question
+ * @param question The user's question
+ * @param agentIdentity The agent's identity/expertise
+ * @returns true if web search is needed
+ */
+async function needsWebSearch(question: string, agentIdentity: string): Promise<boolean> {
+  try {
+    const { content } = await chatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: `You are an assistant helping to determine if an agent needs external web information to answer a question.
+
+Agent's identity and expertise: ${agentIdentity}
+
+User's question: "${question}"
+
+Can this agent answer this question based solely on their character, background, and general knowledge? 
+Or do they need current web information, specific facts, or external data?
+
+Respond with ONLY "YES" if web search is needed, or "NO" if the agent can answer without it.
+
+Examples:
+- "What's your favorite food?" -> NO (personal question about the agent)
+- "What's the weather like?" -> YES (needs real-time data)
+- "Tell me about yourself" -> NO (about the agent)
+- "What's the population of France?" -> YES (needs factual data)
+- "How do you feel about politics?" -> NO (opinion based on character)
+- "What happened in the news today?" -> YES (needs current information)
+
+Answer (YES or NO):`,
+        },
+      ],
+      max_tokens: 10,
+    });
+    
+    const needsSearch = content.trim().toUpperCase().includes('YES');
+    console.log(`[WebSearch] Question: "${question}" | Needs web search: ${needsSearch}`);
+    return needsSearch;
+  } catch (error) {
+    console.error('[WebSearch] Error determining if web search needed:', error);
+    // Default to not searching to avoid errors
+    return false;
+  }
+}
 
 export async function startConversationMessage(
   ctx: ActionCtx,
@@ -62,12 +150,59 @@ export async function startConversationMessage(
   const memoryWithOtherPlayer = memories.find(
     (m) => m.data.type === 'conversation' && m.data.playerIds.includes(otherPlayerId),
   );
+  
+  // Two-step system: First check if web search is needed
+  let webSearchContext = '';
+  if (ENABLE_WEB_SEARCH && lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[WebSearch] 🤔 TWO-STEP SYSTEM: Evaluating if web search is needed`);
+    console.log(`[WebSearch] Context: Starting conversation`);
+    console.log(`[WebSearch] Agent: ${player.name}`);
+    console.log(`[WebSearch] User question: "${lastOtherPlayerMessage.text}"`);
+    
+    try {
+      const shouldSearch = await needsWebSearch(
+        lastOtherPlayerMessage.text,
+        agent?.identity || ''
+      );
+      
+      if (shouldSearch) {
+        console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
+        console.log(`[WebSearch] 🌐 Initiating web search...`);
+        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        webSearchContext = await filterAndFormatResults(
+          searchResults,
+          agent?.identity || '',
+          lastOtherPlayerMessage.text
+        );
+        if (webSearchContext) {
+          console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
+        } else {
+          console.log(`[WebSearch] ⚠️ No usable web context found`);
+        }
+      } else {
+        console.log(`[WebSearch] ❌ DECISION: Web search NOT needed (within agent's competencies)`);
+        console.log(`[WebSearch] 💭 Agent will answer based on character knowledge`);
+      }
+    } catch (error) {
+      console.error(`[WebSearch] ❌ Web search failed:`, error);
+      console.error(`[WebSearch] Continuing without web context`);
+    }
+    console.log(`${'='.repeat(80)}\n`);
+  } else if (!ENABLE_WEB_SEARCH && lastOtherPlayerMessage) {
+    console.log(`\n[WebSearch] ⚠️ Web search is DISABLED (set ENABLE_WEB_SEARCH=true to enable)\n`);
+  }
+  
   const prompt = [
     `You are ${player.name}, and you just started a conversation with ${otherPlayer.name}.`,
   ];
   prompt.push(...agentPrompts(otherPlayer, agent, otherAgent ?? null));
   prompt.push(...previousConversationPrompt(otherPlayer, lastConversation));
   prompt.push(...relatedMemoriesPrompt(memories));
+  if (webSearchContext) {
+    prompt.push(webSearchContext);
+    prompt.push('IMPORTANT: The above web information was retrieved because this question is outside your usual expertise. Use this information to provide an accurate, helpful response.');
+  }
   if (memoryWithOtherPlayer) {
     prompt.push(
       `Be sure to include some detail or question about a previous conversation in your greeting.`,
@@ -85,6 +220,68 @@ export async function startConversationMessage(
     max_tokens: 300,
     stop: stopWords(otherPlayer.name, player.name),
   });
+  
+  // Fallback: If agent says they can't answer, try with web search
+  if (ENABLE_WEB_SEARCH && !webSearchContext && detectCannotAnswerResponse(content)) {
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[WebSearch] 🔄 FALLBACK MECHANISM TRIGGERED`);
+    console.log(`[WebSearch] Agent response indicated inability to answer`);
+    console.log(`[WebSearch] Response preview: "${content.slice(0, 100)}..."`);
+    console.log(`[WebSearch] 🌐 Retrying with web search...`);
+    
+    try {
+      if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
+        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        webSearchContext = await filterAndFormatResults(
+          searchResults,
+          agent?.identity || '',
+          lastOtherPlayerMessage.text
+        );
+        
+        if (webSearchContext) {
+          console.log(`[WebSearch] ✅ Web context obtained, regenerating response...`);
+          
+          // Regenerate prompt with web context
+          const retryPrompt = [
+            `You are ${player.name}, and you just started a conversation with ${otherPlayer.name}.`,
+          ];
+          retryPrompt.push(...agentPrompts(otherPlayer, agent, otherAgent ?? null));
+          retryPrompt.push(...previousConversationPrompt(otherPlayer, lastConversation));
+          retryPrompt.push(...relatedMemoriesPrompt(memories));
+          retryPrompt.push(webSearchContext);
+          retryPrompt.push('IMPORTANT: You previously said you could not answer this question. The above web information has been retrieved to help you provide an accurate answer. Use this information to answer the question properly.');
+          if (memoryWithOtherPlayer) {
+            retryPrompt.push(
+              `Be sure to include some detail or question about a previous conversation in your greeting.`,
+            );
+          }
+          retryPrompt.push(`${player.name}:`);
+          
+          const { content: retryContent } = await chatCompletion({
+            messages: [
+              {
+                role: 'user',
+                content: retryPrompt.join('\n'),
+              },
+            ],
+            max_tokens: 300,
+            stop: stopWords(otherPlayer.name, player.name),
+          });
+          
+          console.log(`[WebSearch] ✅ New response generated with web context`);
+          console.log(`${'='.repeat(80)}\n`);
+          return retryContent;
+        } else {
+          console.log(`[WebSearch] ⚠️ Could not obtain web context, using original response`);
+          console.log(`${'='.repeat(80)}\n`);
+        }
+      }
+    } catch (error) {
+      console.error(`[WebSearch] ❌ Fallback search failed:`, error);
+      console.error(`[WebSearch] Using original response`);
+    }
+  }
+  
   return content;
 }
 
@@ -133,12 +330,59 @@ export async function continueConversationMessage(
     'query',
   );
   const memories = await memory.searchMemories(ctx, player.id as GameId<'players'>, embedding, 3);
+  
+  // Two-step system: First check if web search is needed
+  let webSearchContext = '';
+  if (ENABLE_WEB_SEARCH && lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[WebSearch] 🤔 TWO-STEP SYSTEM: Evaluating if web search is needed`);
+    console.log(`[WebSearch] Context: Continuing conversation`);
+    console.log(`[WebSearch] Agent: ${player.name}`);
+    console.log(`[WebSearch] User question: "${lastOtherPlayerMessage.text}"`);
+    
+    try {
+      const shouldSearch = await needsWebSearch(
+        lastOtherPlayerMessage.text,
+        agent?.identity || ''
+      );
+      
+      if (shouldSearch) {
+        console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
+        console.log(`[WebSearch] 🌐 Initiating web search...`);
+        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        webSearchContext = await filterAndFormatResults(
+          searchResults,
+          agent?.identity || '',
+          lastOtherPlayerMessage.text
+        );
+        if (webSearchContext) {
+          console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
+        } else {
+          console.log(`[WebSearch] ⚠️ No usable web context found`);
+        }
+      } else {
+        console.log(`[WebSearch] ❌ DECISION: Web search NOT needed (within agent's competencies)`);
+        console.log(`[WebSearch] 💭 Agent will answer based on character knowledge`);
+      }
+    } catch (error) {
+      console.error(`[WebSearch] ❌ Web search failed:`, error);
+      console.error(`[WebSearch] Continuing without web context`);
+    }
+    console.log(`${'='.repeat(80)}\n`);
+  } else if (!ENABLE_WEB_SEARCH && lastOtherPlayerMessage) {
+    console.log(`\n[WebSearch] ⚠️ Web search is DISABLED (set ENABLE_WEB_SEARCH=true to enable)\n`);
+  }
+  
   const prompt = [
     `You are ${player.name}, and you're currently in a conversation with ${otherPlayer.name}.`,
     `The conversation started at ${started.toLocaleString()}. It's now ${new Date().toLocaleString()}.`,
   ];
   prompt.push(...agentPrompts(otherPlayer, agent, otherAgent ?? null));
   prompt.push(...relatedMemoriesPrompt(memories));
+  if (webSearchContext) {
+    prompt.push(webSearchContext);
+    prompt.push('IMPORTANT: The above web information was retrieved because this question requires external knowledge. Use this information to provide an accurate response.');
+  }
   prompt.push(
     `Below is the current chat history between you and ${otherPlayer.name}.`,
     `DO NOT greet them again. Do NOT use the word "Hey" too often. Your response should be brief and within 200 characters.`,
@@ -164,6 +408,76 @@ export async function continueConversationMessage(
     max_tokens: 300,
     stop: stopWords(otherPlayer.name, player.name),
   });
+  
+  // Fallback: If agent says they can't answer, try with web search
+  if (ENABLE_WEB_SEARCH && !webSearchContext && detectCannotAnswerResponse(content)) {
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[WebSearch] 🔄 FALLBACK MECHANISM TRIGGERED`);
+    console.log(`[WebSearch] Agent response indicated inability to answer`);
+    console.log(`[WebSearch] Response preview: "${content.slice(0, 100)}..."`);
+    console.log(`[WebSearch] 🌐 Retrying with web search...`);
+    
+    try {
+      if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
+        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        webSearchContext = await filterAndFormatResults(
+          searchResults,
+          agent?.identity || '',
+          lastOtherPlayerMessage.text
+        );
+        
+        if (webSearchContext) {
+          console.log(`[WebSearch] ✅ Web context obtained, regenerating response...`);
+          
+          // Regenerate prompt with web context
+          const retryPrompt = [
+            `You are ${player.name}, and you're currently in a conversation with ${otherPlayer.name}.`,
+            `The conversation started at ${started.toLocaleString()}. It's now ${new Date().toLocaleString()}.`,
+          ];
+          retryPrompt.push(...agentPrompts(otherPlayer, agent, otherAgent ?? null));
+          retryPrompt.push(...relatedMemoriesPrompt(memories));
+          retryPrompt.push(webSearchContext);
+          retryPrompt.push('IMPORTANT: You previously said you could not answer this question. The above web information has been retrieved to help you provide an accurate answer. Use this information to answer the question properly.');
+          retryPrompt.push(
+            `Below is the current chat history between you and ${otherPlayer.name}.`,
+            `DO NOT greet them again. Do NOT use the word "Hey" too often. Your response should be brief and within 200 characters.`,
+          );
+          
+          const retryLlmMessages: LLMMessage[] = [
+            {
+              role: 'user',
+              content: retryPrompt.join('\n'),
+            },
+            ...(await previousMessages(
+              ctx,
+              worldId,
+              player,
+              otherPlayer,
+              conversation.id as GameId<'conversations'>,
+            )),
+          ];
+          retryLlmMessages.push({ role: 'user', content: `${player.name}:` });
+          
+          const { content: retryContent } = await chatCompletion({
+            messages: retryLlmMessages,
+            max_tokens: 300,
+            stop: stopWords(otherPlayer.name, player.name),
+          });
+          
+          console.log(`[WebSearch] ✅ New response generated with web context`);
+          console.log(`${'='.repeat(80)}\n`);
+          return retryContent;
+        } else {
+          console.log(`[WebSearch] ⚠️ Could not obtain web context, using original response`);
+          console.log(`${'='.repeat(80)}\n`);
+        }
+      }
+    } catch (error) {
+      console.error(`[WebSearch] ❌ Fallback search failed:`, error);
+      console.error(`[WebSearch] Using original response`);
+    }
+  }
+  
   return content;
 }
 
