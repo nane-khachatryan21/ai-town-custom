@@ -19,9 +19,7 @@ export const exportToJSON: any = action({
       limit: args.limit,
     });
     
-    // Output clean JSON only
-    console.log(JSON.stringify(logs, null, 2));
-    
+    // Just return the data - Convex will output it as JSON
     return logs;
   },
 });
@@ -39,9 +37,6 @@ export const exportByAgent: any = action({
       agentName: args.agentName,
       limit: args.limit,
     });
-    
-    // Output clean JSON only
-    console.log(JSON.stringify(logs, null, 2));
     
     return logs;
   },
@@ -61,9 +56,6 @@ export const exportByTimeRange: any = action({
       endTime: args.endTime,
     });
     
-    // Output clean JSON only
-    console.log(JSON.stringify(logs, null, 2));
-    
     return logs;
   },
 });
@@ -74,18 +66,6 @@ export const exportByTimeRange: any = action({
 export const getStatistics: any = action({
   handler: async (ctx) => {
     const stats: any = await ctx.runQuery(api.util.webSearchLogger.getStats);
-    
-    console.log('\n' + '='.repeat(80));
-    console.log('WEB SEARCH STATISTICS');
-    console.log('='.repeat(80));
-    console.log(`Total Searches: ${stats.totalSearches}`);
-    console.log(`Successful: ${stats.successfulSearches} (${stats.successRate.toFixed(1)}%)`);
-    console.log(`Failed: ${stats.failedSearches}`);
-    console.log(`Proactive: ${stats.proactiveSearches}`);
-    console.log(`Fallback: ${stats.fallbackSearches}`);
-    console.log(`Avg Duration: ${stats.avgDuration}ms`);
-    console.log(`Avg Results: ${stats.avgResults}`);
-    console.log('='.repeat(80) + '\n');
     
     return stats;
   },
