@@ -4,7 +4,7 @@
  */
 
 import { ActionCtx, internalMutation, query } from '../_generated/server';
-import { api } from '../_generated/api';
+import { api, internal } from '../_generated/api';
 import { SearchResult } from './webSearch';
 import { v } from 'convex/values';
 
@@ -32,7 +32,7 @@ export async function logWebSearch(
   entry: WebSearchLogEntry
 ): Promise<void> {
   try {
-    await ctx.runMutation(api.util.webSearchLogger.insertLog, {
+    await ctx.runMutation(internal.util.webSearchLogger.insertLog, {
       timestamp: entry.timestamp,
       question: entry.question,
       agentName: entry.agentName,
