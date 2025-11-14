@@ -39,6 +39,7 @@ import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as engine_abstractGame from "../engine/abstractGame.js";
 import type * as engine_historicalObject from "../engine/historicalObject.js";
+import type * as exportWebSearchLogs from "../exportWebSearchLogs.js";
 import type * as http from "../http.js";
 import type * as init from "../init.js";
 import type * as messages from "../messages.js";
@@ -61,6 +62,7 @@ import type * as util_object from "../util/object.js";
 import type * as util_sleep from "../util/sleep.js";
 import type * as util_types from "../util/types.js";
 import type * as util_webSearch from "../util/webSearch.js";
+import type * as util_webSearchLogger from "../util/webSearchLogger.js";
 import type * as util_xxhash from "../util/xxhash.js";
 import type * as world from "../world.js";
 
@@ -98,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   "engine/abstractGame": typeof engine_abstractGame;
   "engine/historicalObject": typeof engine_historicalObject;
+  exportWebSearchLogs: typeof exportWebSearchLogs;
   http: typeof http;
   init: typeof init;
   messages: typeof messages;
@@ -120,6 +123,7 @@ declare const fullApi: ApiFromModules<{
   "util/sleep": typeof util_sleep;
   "util/types": typeof util_types;
   "util/webSearch": typeof util_webSearch;
+  "util/webSearchLogger": typeof util_webSearchLogger;
   "util/xxhash": typeof util_xxhash;
   world: typeof world;
 }>;

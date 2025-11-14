@@ -9,6 +9,7 @@ import { GameId, conversationId, playerId } from '../aiTown/ids';
 import { NUM_MEMORIES_TO_SEARCH, WEB_SEARCH_ENABLED_LOCAL } from '../constants';
 import { moderateContent, getSafeResponse } from '../util/guardrails';
 import { performWebSearch, filterAndFormatResults } from '../util/webSearch';
+import { logWebSearch } from '../util/webSearchLogger';
 
 const selfInternal = internal.agent.conversation;
 
@@ -175,6 +176,7 @@ export async function startConversationMessage(
     console.log(`[WebSearch] Agent: ${player.name}`);
     console.log(`[WebSearch] User question: "${lastOtherPlayerMessage.text}"`);
     
+    const searchStartTime = Date.now();
     try {
       const shouldSearch = await needsWebSearch(
         lastOtherPlayerMessage.text,
@@ -185,11 +187,28 @@ export async function startConversationMessage(
         console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
         console.log(`[WebSearch] 🌐 Initiating web search...`);
         const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        const searchDuration = Date.now() - searchStartTime;
+        
         webSearchContext = await filterAndFormatResults(
           searchResults,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
+        
+        // Log the web search
+        await logWebSearch(ctx, {
+          timestamp: searchStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0,
+          duration: searchDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'proactive',
+        });
+        
         if (webSearchContext) {
           console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
         } else {
@@ -200,8 +219,23 @@ export async function startConversationMessage(
         console.log(`[WebSearch] 💭 Agent will answer based on character knowledge`);
       }
     } catch (error) {
+      const searchDuration = Date.now() - searchStartTime;
       console.error(`[WebSearch] ❌ Web search failed:`, error);
       console.error(`[WebSearch] Continuing without web context`);
+      
+      // Log the failed search
+      await logWebSearch(ctx, {
+        timestamp: searchStartTime,
+        question: lastOtherPlayerMessage.text,
+        agentName: player.name,
+        agentIdentity: agent?.identity,
+        searchResults: [],
+        success: false,
+        duration: searchDuration,
+        resultCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+        triggerType: 'proactive',
+      });
     }
     console.log(`${'='.repeat(80)}\n`);
   } else if (!isWebSearchEnabled() && lastOtherPlayerMessage) {
@@ -244,14 +278,31 @@ export async function startConversationMessage(
     console.log(`[WebSearch] Response preview: "${content.slice(0, 100)}..."`);
     console.log(`[WebSearch] 🌐 Retrying with web search...`);
     
+    const fallbackStartTime = Date.now();
     try {
       if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
         const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        const fallbackDuration = Date.now() - fallbackStartTime;
+        
         webSearchContext = await filterAndFormatResults(
           searchResults,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
+        
+        // Log the fallback web search
+        await logWebSearch(ctx, {
+          timestamp: fallbackStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0 && !!webSearchContext,
+          duration: fallbackDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'fallback',
+        });
         
         if (webSearchContext) {
           console.log(`[WebSearch] ✅ Web context obtained, regenerating response...`);
@@ -362,6 +413,7 @@ export async function continueConversationMessage(
     console.log(`[WebSearch] Agent: ${player.name}`);
     console.log(`[WebSearch] User question: "${lastOtherPlayerMessage.text}"`);
     
+    const searchStartTime = Date.now();
     try {
       const shouldSearch = await needsWebSearch(
         lastOtherPlayerMessage.text,
@@ -372,11 +424,28 @@ export async function continueConversationMessage(
         console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
         console.log(`[WebSearch] 🌐 Initiating web search...`);
         const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        const searchDuration = Date.now() - searchStartTime;
+        
         webSearchContext = await filterAndFormatResults(
           searchResults,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
+        
+        // Log the web search
+        await logWebSearch(ctx, {
+          timestamp: searchStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0,
+          duration: searchDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'proactive',
+        });
+        
         if (webSearchContext) {
           console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
         } else {
@@ -387,8 +456,23 @@ export async function continueConversationMessage(
         console.log(`[WebSearch] 💭 Agent will answer based on character knowledge`);
       }
     } catch (error) {
+      const searchDuration = Date.now() - searchStartTime;
       console.error(`[WebSearch] ❌ Web search failed:`, error);
       console.error(`[WebSearch] Continuing without web context`);
+      
+      // Log the failed search
+      await logWebSearch(ctx, {
+        timestamp: searchStartTime,
+        question: lastOtherPlayerMessage.text,
+        agentName: player.name,
+        agentIdentity: agent?.identity,
+        searchResults: [],
+        success: false,
+        duration: searchDuration,
+        resultCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+        triggerType: 'proactive',
+      });
     }
     console.log(`${'='.repeat(80)}\n`);
   } else if (!isWebSearchEnabled() && lastOtherPlayerMessage) {
@@ -439,14 +523,31 @@ export async function continueConversationMessage(
     console.log(`[WebSearch] Response preview: "${content.slice(0, 100)}..."`);
     console.log(`[WebSearch] 🌐 Retrying with web search...`);
     
+    const fallbackStartTime = Date.now();
     try {
       if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
         const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        const fallbackDuration = Date.now() - fallbackStartTime;
+        
         webSearchContext = await filterAndFormatResults(
           searchResults,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
+        
+        // Log the fallback web search
+        await logWebSearch(ctx, {
+          timestamp: fallbackStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0 && !!webSearchContext,
+          duration: fallbackDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'fallback',
+        });
         
         if (webSearchContext) {
           console.log(`[WebSearch] ✅ Web context obtained, regenerating response...`);
