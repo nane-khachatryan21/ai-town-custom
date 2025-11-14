@@ -40,11 +40,17 @@ just convex
 
 ## How It Works
 
-### Two-Step System
+### Three-Step Intelligent System
 
-1. **First Check**: When a user asks a question, the agent evaluates whether it needs external information
-2. **Conditional Search**: Only if the question is outside the agent's competencies, a web search is triggered
-3. **Smart Response**: The agent uses the web results to provide an accurate answer
+1. **Relevance Check**: First, an LLM determines if the question is relevant to the agent's persona and domain
+   - Questions about unrelated topics (e.g., "What's the best pizza recipe?" to a parliamentary deputy) are filtered out
+   - Only relevant questions proceed to the next step
+   
+2. **Knowledge Gap Detection**: For relevant questions, the agent evaluates whether it needs external information
+   - Personal/opinion questions: Can be answered from the agent's character
+   - Current/factual questions: Need web search
+   
+3. **Smart Web Search**: Only if both checks pass, a web search is performed and results are integrated
 
 ### Fallback Mechanism
 
@@ -70,7 +76,12 @@ just convex run testWebSearch:quickTest
 
 # Test fallback detection
 just convex run testWebSearch:testFallbackDetection
+
+# Test relevance filtering (NEW!)
+just convex run testWebSearch:testRelevanceFiltering
 ```
+
+The relevance filtering test checks if questions like "What's the best pizza recipe?" are correctly filtered out as irrelevant to a parliamentary deputy's domain.
 
 ## Logs
 
@@ -80,8 +91,24 @@ When web search is disabled, you'll see:
 ```
 
 When enabled, you'll see detailed logs for:
-- Decision making (needs web search or not)
-- Search execution
-- Result filtering and summarization
-- Fallback triggers
+- 🎯 Relevance check (is the question relevant to agent's domain?)
+- ⛔ Questions filtered out as irrelevant
+- ✅ Knowledge gap detection (needs web search or not)
+- 🔍 Search execution
+- 📊 Result filtering and summarization
+- 🔄 Fallback triggers
+
+Example log flow for a relevant question that needs search:
+```
+[WebSearch] 🎯 Relevance check: "What's the latest economic policy?" | Relevant to agent: true
+[WebSearch] ✅ Question needs web search: true
+[WebSearch] 🔍 Performing DuckDuckGo search for: "latest economic policy"
+[WebSearch] 📊 Found 5 search results, filtering for relevance...
+```
+
+Example log flow for an irrelevant question:
+```
+[WebSearch] 🎯 Relevance check: "What's the best pizza recipe?" | Relevant to agent: false
+[WebSearch] ⛔ Question not relevant to agent's domain - skipping web search
+```
 

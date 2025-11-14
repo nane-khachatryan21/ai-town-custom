@@ -69,6 +69,57 @@ function detectCannotAnswerResponse(response: string): boolean {
 }
 
 /**
+ * Determines if a question is relevant to the agent's persona and domain
+ * @param question The user's question
+ * @param agentIdentity The agent's identity/expertise
+ * @returns true if the question is relevant to the agent
+ */
+async function isQuestionRelevantToAgent(question: string, agentIdentity: string): Promise<boolean> {
+  try {
+    const { content } = await chatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: `You are an assistant helping to determine if a question is relevant to an agent's role and expertise.
+
+Agent's identity and expertise: ${agentIdentity}
+
+User's question: "${question}"
+
+Is this question relevant to the agent's role, expertise, domain, or responsibilities? 
+Consider:
+- Is the question related to topics the agent would professionally handle?
+- Is it about their area of knowledge or work?
+- Would the agent reasonably be expected to discuss this topic?
+
+Respond with ONLY "RELEVANT" or "NOT_RELEVANT".
+
+Examples for a Parliamentary Deputy:
+- "What is your stance on education reform?" -> RELEVANT (policy topic)
+- "Can you explain the recent tax law?" -> RELEVANT (legislative topic)
+- "What's the best pizza recipe?" -> NOT_RELEVANT (unrelated to their role)
+- "How do I fix my car?" -> NOT_RELEVANT (unrelated to their expertise)
+- "Tell me about the current parliament session" -> RELEVANT (their work)
+- "What's the weather forecast?" -> NOT_RELEVANT (not their domain)
+
+Answer (RELEVANT or NOT_RELEVANT):`,
+        },
+      ],
+      max_tokens: 10,
+    });
+    
+    const isRelevant = content.trim().toUpperCase().includes('RELEVANT') && 
+                      !content.trim().toUpperCase().includes('NOT_RELEVANT');
+    console.log(`[WebSearch] 🎯 Relevance check: "${question}" | Relevant to agent: ${isRelevant}`);
+    return isRelevant;
+  } catch (error) {
+    console.error('[WebSearch] Error checking question relevance:', error);
+    // Default to relevant to avoid blocking valid questions
+    return true;
+  }
+}
+
+/**
  * Determines if the agent needs web search to answer the question
  * @param question The user's question
  * @param agentIdentity The agent's identity/expertise
@@ -76,6 +127,14 @@ function detectCannotAnswerResponse(response: string): boolean {
  */
 async function needsWebSearch(question: string, agentIdentity: string): Promise<boolean> {
   try {
+    // First check if the question is relevant to the agent's domain
+    const isRelevant = await isQuestionRelevantToAgent(question, agentIdentity);
+    if (!isRelevant) {
+      console.log(`[WebSearch] ⛔ Question not relevant to agent's domain - skipping web search`);
+      return false;
+    }
+
+    // If relevant, check if web search is needed
     const { content } = await chatCompletion({
       messages: [
         {
@@ -86,18 +145,19 @@ Agent's identity and expertise: ${agentIdentity}
 
 User's question: "${question}"
 
-Can this agent answer this question based solely on their character, background, and general knowledge? 
+The question is relevant to the agent's domain. Now determine:
+Can this agent answer based solely on their character, background, and general knowledge? 
 Or do they need current web information, specific facts, or external data?
 
 Respond with ONLY "YES" if web search is needed, or "NO" if the agent can answer without it.
 
 Examples:
-- "What's your favorite food?" -> NO (personal question about the agent)
-- "What's the weather like?" -> YES (needs real-time data)
-- "Tell me about yourself" -> NO (about the agent)
-- "What's the population of France?" -> YES (needs factual data)
-- "How do you feel about politics?" -> NO (opinion based on character)
-- "What happened in the news today?" -> YES (needs current information)
+- "What's your stance on this issue?" -> NO (personal opinion)
+- "What's the latest unemployment rate?" -> YES (needs current data)
+- "Tell me about your background" -> NO (about the agent)
+- "What was decided in parliament yesterday?" -> YES (needs recent information)
+- "How do you approach policy?" -> NO (opinion based on character)
+- "What happened in the recent election?" -> YES (needs current information)
 
 Answer (YES or NO):`,
         },
@@ -106,7 +166,7 @@ Answer (YES or NO):`,
     });
     
     const needsSearch = content.trim().toUpperCase().includes('YES');
-    console.log(`[WebSearch] Question: "${question}" | Needs web search: ${needsSearch}`);
+    console.log(`[WebSearch] ✅ Question needs web search: ${needsSearch}`);
     return needsSearch;
   } catch (error) {
     console.error('[WebSearch] Error determining if web search needed:', error);
