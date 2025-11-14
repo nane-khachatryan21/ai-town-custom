@@ -364,7 +364,7 @@ export const testFallbackDetection = action({
  * Test the relevance filtering for questions
  * Run this with: just convex run testWebSearch:testRelevanceFiltering
  */
-export const testRelevanceFiltering = action({
+export const testRelevanceFiltering: any = action({
   handler: async (ctx) => {
     console.log('\n' + '='.repeat(100));
     console.log('🎯 TESTING RELEVANCE FILTERING FOR WEB SEARCH');
@@ -435,7 +435,7 @@ Your expertise includes: economics, law, education, healthcare, foreign relation
       try {
         // Call the internal mutation that uses needsWebSearch
         // This simulates what happens in conversation.ts
-        const result = await ctx.runAction(internal.testWebSearch.checkRelevanceInternal, {
+        const result: any = await ctx.runAction(internal.testWebSearch.checkRelevanceInternal, {
           question: testCase.question,
           agentIdentity: agentIdentity,
         });
@@ -462,7 +462,7 @@ Your expertise includes: economics, law, education, healthcare, foreign relation
       }
     }
     
-    const passed = results.filter(r => r.success).length;
+    const passed: any = results.filter(r => r.success).length;
     const failed = results.length - passed;
     
     console.log('\n' + '='.repeat(100));
