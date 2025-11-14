@@ -284,8 +284,9 @@ export async function startConversationMessage(
           });
           
           console.log(`[WebSearch] ✅ New response generated with web context`);
+          console.log(`[WebSearch] 🔄 Adding [web_search] prefix to response`);
           console.log(`${'='.repeat(80)}\n`);
-          return retryContent;
+          return `[web_search] ${retryContent}`;
         } else {
           console.log(`[WebSearch] ⚠️ Could not obtain web context, using original response`);
           console.log(`${'='.repeat(80)}\n`);
@@ -295,6 +296,12 @@ export async function startConversationMessage(
       console.error(`[WebSearch] ❌ Fallback search failed:`, error);
       console.error(`[WebSearch] Using original response`);
     }
+  }
+  
+  // Add [web_search] prefix if web context was used in initial response
+  if (webSearchContext) {
+    console.log(`[WebSearch] 🔄 Adding [web_search] prefix to response`);
+    return `[web_search] ${content}`;
   }
   
   return content;
@@ -480,8 +487,9 @@ export async function continueConversationMessage(
           });
           
           console.log(`[WebSearch] ✅ New response generated with web context`);
+          console.log(`[WebSearch] 🔄 Adding [web_search] prefix to response`);
           console.log(`${'='.repeat(80)}\n`);
-          return retryContent;
+          return `[web_search] ${retryContent}`;
         } else {
           console.log(`[WebSearch] ⚠️ Could not obtain web context, using original response`);
           console.log(`${'='.repeat(80)}\n`);
@@ -491,6 +499,12 @@ export async function continueConversationMessage(
       console.error(`[WebSearch] ❌ Fallback search failed:`, error);
       console.error(`[WebSearch] Using original response`);
     }
+  }
+  
+  // Add [web_search] prefix if web context was used in initial response
+  if (webSearchContext) {
+    console.log(`[WebSearch] 🔄 Adding [web_search] prefix to response`);
+    return `[web_search] ${content}`;
   }
   
   return content;
