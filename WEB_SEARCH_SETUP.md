@@ -40,7 +40,7 @@ just convex
 
 ## How It Works
 
-### Three-Step Intelligent System
+### Four-Step Intelligent System
 
 1. **Relevance Check**: First, an LLM determines if the question is relevant to the agent's persona and domain
    - Questions about unrelated topics (e.g., "What's the best pizza recipe?" to a parliamentary deputy) are filtered out
@@ -50,7 +50,12 @@ just convex
    - Personal/opinion questions: Can be answered from the agent's character
    - Current/factual questions: Need web search
    
-3. **Smart Web Search**: Only if both checks pass, a web search is performed and results are integrated
+3. **Question Rewriting** (NEW!): Before searching, the question is rewritten to be more specific to the agent's context
+   - Example: "What's the latest economic policy?" → "latest economic policy Armenia parliament 2024"
+   - Incorporates agent's role, country, and expertise
+   - Produces more relevant search results
+   
+4. **Smart Web Search**: The rewritten query is searched and results are integrated into the agent's response
 
 ### Fallback Mechanism
 
@@ -77,11 +82,16 @@ just convex run testWebSearch:quickTest
 # Test fallback detection
 just convex run testWebSearch:testFallbackDetection
 
-# Test relevance filtering (NEW!)
+# Test relevance filtering
 just convex run testWebSearch:testRelevanceFiltering
+
+# Test question rewriting (NEW!)
+just convex run testWebSearch:testQuestionRewriting
 ```
 
 The relevance filtering test checks if questions like "What's the best pizza recipe?" are correctly filtered out as irrelevant to a parliamentary deputy's domain.
+
+The question rewriting test shows how questions are reformulated to be more specific to the agent's context (e.g., "What's the latest policy?" becomes "latest policy Armenia parliament 2024").
 
 ## Logs
 
@@ -94,6 +104,7 @@ When enabled, you'll see detailed logs for:
 - 🎯 Relevance check (is the question relevant to agent's domain?)
 - ⛔ Questions filtered out as irrelevant
 - ✅ Knowledge gap detection (needs web search or not)
+- 📝 Question rewriting (original → contextual)
 - 🔍 Search execution
 - 📊 Result filtering and summarization
 - 🔄 Fallback triggers
@@ -102,7 +113,10 @@ Example log flow for a relevant question that needs search:
 ```
 [WebSearch] 🎯 Relevance check: "What's the latest economic policy?" | Relevant to agent: true
 [WebSearch] ✅ Question needs web search: true
-[WebSearch] 🔍 Performing DuckDuckGo search for: "latest economic policy"
+[WebSearch] 📝 Question rewritten:
+[WebSearch]    Original: "What's the latest economic policy?"
+[WebSearch]    Rewritten: "latest economic policy Armenia parliament 2024"
+[WebSearch] 🔍 Performing DuckDuckGo search for: "latest economic policy Armenia parliament 2024"
 [WebSearch] 📊 Found 5 search results, filtering for relevance...
 ```
 

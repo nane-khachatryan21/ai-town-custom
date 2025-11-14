@@ -175,6 +175,76 @@ Answer (YES or NO):`,
   }
 }
 
+/**
+ * Rewrites a question to be more specific to the agent's persona and context
+ * @param question The original user question
+ * @param agentIdentity The agent's identity/expertise
+ * @param agentName The agent's name
+ * @returns The rewritten question optimized for web search
+ */
+async function rewriteQuestionForAgent(
+  question: string, 
+  agentIdentity: string,
+  agentName: string
+): Promise<string> {
+  try {
+    const { content } = await chatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: `You are helping to rewrite a user's question to make it more specific and contextual for a web search.
+
+Agent's name: ${agentName}
+Agent's identity and expertise: ${agentIdentity}
+
+Original question: "${question}"
+
+Rewrite this question to be more specific and searchable, incorporating:
+1. The agent's specific role/domain (e.g., "Armenian parliament" if they're a deputy)
+2. The agent's country or jurisdiction if relevant
+3. The agent's area of expertise if applicable
+4. Keep the core intent of the question
+
+The rewritten question should help find information that's specifically relevant to this agent's context.
+
+Examples:
+- Original: "What's the latest economic policy?"
+  Agent: Armenian Parliamentary Deputy specializing in economics
+  Rewritten: "latest economic policy Armenia parliament 2024"
+
+- Original: "Tell me about education reform"
+  Agent: Education Minister of Armenia
+  Rewritten: "Armenia education reform ministry current policies"
+
+- Original: "What happened in the recent session?"
+  Agent: Parliamentary Deputy
+  Rewritten: "Armenia parliament recent session decisions"
+
+- Original: "What's the unemployment rate?"
+  Agent: Economics Parliamentary Deputy
+  Rewritten: "Armenia unemployment rate 2024 latest statistics"
+
+Respond with ONLY the rewritten question, no explanation or quotes.
+
+Rewritten question:`,
+        },
+      ],
+      max_tokens: 100,
+    });
+    
+    const rewritten = content.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+    console.log(`[WebSearch] 📝 Question rewritten:`);
+    console.log(`[WebSearch]    Original: "${question}"`);
+    console.log(`[WebSearch]    Rewritten: "${rewritten}"`);
+    return rewritten;
+  } catch (error) {
+    console.error('[WebSearch] Error rewriting question:', error);
+    // Fall back to original question
+    console.log(`[WebSearch] ⚠️ Using original question due to rewrite error`);
+    return question;
+  }
+}
+
 export async function startConversationMessage(
   ctx: ActionCtx,
   worldId: Id<'worlds'>,
@@ -246,7 +316,15 @@ export async function startConversationMessage(
       if (shouldSearch) {
         console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
         console.log(`[WebSearch] 🌐 Initiating web search...`);
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        
+        // Rewrite the question to be more specific to the agent's context
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
         const searchDuration = Date.now() - searchStartTime;
         
         webSearchContext = await filterAndFormatResults(
@@ -341,7 +419,14 @@ export async function startConversationMessage(
     const fallbackStartTime = Date.now();
     try {
       if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        // Rewrite the question for better search results
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
         const fallbackDuration = Date.now() - fallbackStartTime;
         
         webSearchContext = await filterAndFormatResults(
@@ -483,7 +568,15 @@ export async function continueConversationMessage(
       if (shouldSearch) {
         console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
         console.log(`[WebSearch] 🌐 Initiating web search...`);
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        
+        // Rewrite the question to be more specific to the agent's context
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
         const searchDuration = Date.now() - searchStartTime;
         
         webSearchContext = await filterAndFormatResults(
@@ -586,7 +679,14 @@ export async function continueConversationMessage(
     const fallbackStartTime = Date.now();
     try {
       if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
+        // Rewrite the question for better search results
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
         const fallbackDuration = Date.now() - fallbackStartTime;
         
         webSearchContext = await filterAndFormatResults(

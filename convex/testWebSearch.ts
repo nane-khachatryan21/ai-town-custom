@@ -528,3 +528,179 @@ Answer (RELEVANT or NOT_RELEVANT):`,
   },
 });
 
+/**
+ * Test question rewriting for agent context
+ * Run this with: just convex run testWebSearch:testQuestionRewriting
+ */
+export const testQuestionRewriting = action({
+  handler: async (ctx) => {
+    console.log('\n' + '='.repeat(100));
+    console.log('📝 TESTING QUESTION REWRITING FOR AGENT CONTEXT');
+    console.log('='.repeat(100) + '\n');
+    
+    const agentIdentity = `You are Ռուբինյան Ռուբեն Կարապետի (Ruben Rubinyan). 
+You are a member of the "Civil Contract" party and your position is Deputy Speaker of the National Assembly of Armenia.
+You are a member of Inter-Parliamentary Committees, International Parliamentary Organizations, and Friendship Groups of the National Assembly of the Republic of Armenia.
+Your expertise includes: foreign relations, international affairs, European studies, and parliamentary procedures.`;
+
+    const agentName = 'Ռուբինյան Ռուբեն Կարապետի';
+
+    const testCases = [
+      {
+        original: 'What is the latest economic policy?',
+        description: 'General policy question',
+      },
+      {
+        original: 'Tell me about education reform',
+        description: 'Education topic',
+      },
+      {
+        original: 'What happened in the recent parliament session?',
+        description: 'Parliamentary session question',
+      },
+      {
+        original: 'What is the unemployment rate?',
+        description: 'Economic statistics',
+      },
+      {
+        original: 'Who won the last election?',
+        description: 'Election results',
+      },
+      {
+        original: 'What are the foreign relations with EU?',
+        description: 'International relations (agent specialty)',
+      },
+    ];
+    
+    console.log(`Agent: ${agentName}`);
+    console.log(`Expertise: International relations, European studies, Parliamentary procedures\n`);
+    console.log(`Testing ${testCases.length} question rewrites\n`);
+    
+    const results = [];
+    
+    for (let i = 0; i < testCases.length; i++) {
+      const testCase = testCases[i];
+      console.log(`\n${'='.repeat(100)}`);
+      console.log(`TEST ${i + 1}/${testCases.length}: ${testCase.description}`);
+      console.log(`Original Question: "${testCase.original}"`);
+      console.log(`${'='.repeat(100)}\n`);
+      
+      try {
+        const startTime = Date.now();
+        
+        // Call the internal action to rewrite the question
+        const result: any = await ctx.runAction(internal.testWebSearch.rewriteQuestionInternal, {
+          question: testCase.original,
+          agentIdentity: agentIdentity,
+          agentName: agentName,
+        });
+        
+        const duration = Date.now() - startTime;
+        
+        console.log(`✅ Rewritten Question: "${result.rewritten}"`);
+        console.log(`⏱️  Duration: ${duration}ms`);
+        
+        results.push({
+          ...testCase,
+          rewritten: result.rewritten,
+          duration,
+          success: true,
+        });
+        
+      } catch (error) {
+        console.error(`❌ Error rewriting question: ${error}`);
+        results.push({
+          ...testCase,
+          rewritten: testCase.original,
+          duration: 0,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    
+    console.log('\n' + '='.repeat(100));
+    console.log('QUESTION REWRITING TEST RESULTS');
+    console.log('='.repeat(100));
+    
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      console.log(`\n${i + 1}. ${result.description}`);
+      console.log(`   Original:  "${result.original}"`);
+      console.log(`   Rewritten: "${result.rewritten}"`);
+      console.log(`   ${result.success ? '✅ Success' : '❌ Failed'} (${result.duration}ms)`);
+    }
+    
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+    
+    console.log('\n' + '='.repeat(100));
+    console.log(`Total tests: ${testCases.length}`);
+    console.log(`Successful: ${successful} ✅`);
+    console.log(`Failed: ${failed} ${failed > 0 ? '❌' : ''}`);
+    console.log('='.repeat(100) + '\n');
+    
+    return {
+      totalTests: testCases.length,
+      successful,
+      failed,
+      results: results,
+    };
+  },
+});
+
+/**
+ * Internal helper action to rewrite questions
+ * Used by testQuestionRewriting
+ */
+export const rewriteQuestionInternal = internalAction({
+  args: {
+    question: v.string(),
+    agentIdentity: v.string(),
+    agentName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { chatCompletion } = await import('./util/llm');
+    
+    const { content } = await chatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: `You are helping to rewrite a user's question to make it more specific and contextual for a web search.
+
+Agent's name: ${args.agentName}
+Agent's identity and expertise: ${args.agentIdentity}
+
+Original question: "${args.question}"
+
+Rewrite this question to be more specific and searchable, incorporating:
+1. The agent's specific role/domain (e.g., "Armenian parliament" if they're a deputy)
+2. The agent's country or jurisdiction if relevant
+3. The agent's area of expertise if applicable
+4. Keep the core intent of the question
+
+The rewritten question should help find information that's specifically relevant to this agent's context.
+
+Examples:
+- Original: "What's the latest economic policy?"
+  Agent: Armenian Parliamentary Deputy specializing in economics
+  Rewritten: "latest economic policy Armenia parliament 2024"
+
+- Original: "Tell me about education reform"
+  Agent: Education Minister of Armenia
+  Rewritten: "Armenia education reform ministry current policies"
+
+Respond with ONLY the rewritten question, no explanation or quotes.
+
+Rewritten question:`,
+        },
+      ],
+      max_tokens: 100,
+    });
+    
+    const rewritten = content.trim().replace(/^["']|["']$/g, '');
+    
+    return { rewritten };
+  },
+});
+
