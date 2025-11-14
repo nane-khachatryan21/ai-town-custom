@@ -127,6 +127,8 @@ To save logs to a file:
 just convex run exportWebSearchLogs:exportToJSON > web_search_logs.json
 ```
 
+The export functions output clean JSON without decorative borders or extra text, making it easy to pipe directly to files or process with tools like `jq`.
+
 ## Analyzing Logs
 
 The logs can be used to:
