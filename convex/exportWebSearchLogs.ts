@@ -19,21 +19,10 @@ export const exportToJSON: any = action({
       limit: args.limit,
     });
     
-    const jsonOutput = JSON.stringify(logs, null, 2);
+    // Output clean JSON only
+    console.log(JSON.stringify(logs, null, 2));
     
-    console.log('\n' + '='.repeat(80));
-    console.log('WEB SEARCH LOGS EXPORT');
-    console.log('='.repeat(80));
-    console.log(`Total logs: ${logs.length}`);
-    console.log('='.repeat(80) + '\n');
-    console.log(jsonOutput);
-    console.log('\n' + '='.repeat(80));
-    
-    return {
-      count: logs.length,
-      logs,
-      json: jsonOutput,
-    };
+    return logs;
   },
 });
 
@@ -51,22 +40,10 @@ export const exportByAgent: any = action({
       limit: args.limit,
     });
     
-    const jsonOutput = JSON.stringify(logs, null, 2);
+    // Output clean JSON only
+    console.log(JSON.stringify(logs, null, 2));
     
-    console.log('\n' + '='.repeat(80));
-    console.log(`WEB SEARCH LOGS FOR AGENT: ${args.agentName}`);
-    console.log('='.repeat(80));
-    console.log(`Total logs: ${logs.length}`);
-    console.log('='.repeat(80) + '\n');
-    console.log(jsonOutput);
-    console.log('\n' + '='.repeat(80));
-    
-    return {
-      agentName: args.agentName,
-      count: logs.length,
-      logs,
-      json: jsonOutput,
-    };
+    return logs;
   },
 });
 
@@ -84,25 +61,10 @@ export const exportByTimeRange: any = action({
       endTime: args.endTime,
     });
     
-    const jsonOutput = JSON.stringify(logs, null, 2);
+    // Output clean JSON only
+    console.log(JSON.stringify(logs, null, 2));
     
-    console.log('\n' + '='.repeat(80));
-    console.log('WEB SEARCH LOGS BY TIME RANGE');
-    console.log('='.repeat(80));
-    console.log(`From: ${new Date(args.startTime).toISOString()}`);
-    console.log(`To: ${new Date(args.endTime).toISOString()}`);
-    console.log(`Total logs: ${logs.length}`);
-    console.log('='.repeat(80) + '\n');
-    console.log(jsonOutput);
-    console.log('\n' + '='.repeat(80));
-    
-    return {
-      startTime: args.startTime,
-      endTime: args.endTime,
-      count: logs.length,
-      logs,
-      json: jsonOutput,
-    };
+    return logs;
   },
 });
 
