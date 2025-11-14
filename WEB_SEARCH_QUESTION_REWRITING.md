@@ -80,6 +80,59 @@ Rewritten: "Armenia unemployment rate 2024 latest statistics"
 Why better: Narrows down to specific country and current data
 ```
 
+### 🚨 CRITICAL RULE: Entity Preservation
+
+**The rewriter NEVER replaces or removes explicitly mentioned entities.**
+
+#### ✅ CORRECT Examples
+
+```
+Original:  "Ինչ է կարծում Նիկոլը թուրքերի մասին" (What does Nikol think about Turks?)
+Agent:     Ruben Rubinyan
+Rewritten: "Nikol opinion about Turks Armenia"
+✓ Keeps "Nikol" because it was explicitly mentioned in the question
+```
+
+```
+Original:  "What did the prime minister say about education?"
+Agent:     Parliamentary Deputy
+Rewritten: "Armenia prime minister statement education 2024"
+✓ Keeps "prime minister", adds country context
+```
+
+```
+Original:  "What's your stance on economic policy?"
+Agent:     Ruben Rubinyan
+Rewritten: "Ruben Rubinyan stance economic policy Armenia parliament"
+✓ Uses agent name because "your" is an indirect reference to the agent
+```
+
+#### ❌ WRONG Examples
+
+```
+Original:  "Ինչ է կարծում Նիկոլը թուրքերի մասին" (What does Nikol think about Turks?)
+Rewritten: "Ռուբեն Ռուբինյան թուրքերի մասին կարծիք..."
+✗ Replaced "Nikol" with agent's name - this is WRONG
+```
+
+```
+Original:  "What does the president think?"
+Rewritten: "What does Ruben Rubinyan think?"
+✗ Replaced "president" with agent's name - this is WRONG
+```
+
+### When to Add Agent's Name
+
+✅ **Add agent's name when:**
+- Question uses "you", "your", or other indirect references
+- No specific person is mentioned in the question
+- Question is about general topics without naming anyone
+
+❌ **DON'T add agent's name when:**
+- Question explicitly mentions another person by name
+- Question refers to a specific role/position (president, minister, etc.)
+- Question is clearly about someone else
+
 #### Example 5: International Relations
 ```
 Agent: Ruben Rubinyan (Foreign Relations Expert)

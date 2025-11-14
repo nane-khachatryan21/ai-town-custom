@@ -227,30 +227,47 @@ Agent's identity and expertise: ${agentIdentity}
 
 Original question: "${question}"
 
-Rewrite this question to be more specific and searchable, incorporating:
-1. The agent's specific role/domain (e.g., "Armenian parliament" if they're a deputy)
-2. The agent's country or jurisdiction if relevant
-3. The agent's area of expertise if applicable
+CRITICAL RULE: If the question mentions a specific person, organization, or entity by name, DO NOT replace or remove it. Preserve all explicitly mentioned entities.
+
+Rewrite this question to be more specific and searchable:
+1. PRESERVE any explicitly mentioned names or entities in the original question
+2. Add contextual information: agent's country, domain, role (e.g., "Armenia parliament")
+3. Add the agent's name ONLY if the question uses indirect references like "you", "your", or no specific person is mentioned
 4. Keep the core intent of the question
 
-The rewritten question should help find information that's specifically relevant to this agent's context.
-
 Examples:
-- Original: "What's the latest economic policy?"
-  Agent: Armenian Parliamentary Deputy specializing in economics
-  Rewritten: "latest economic policy Armenia parliament 2024"
 
-- Original: "Tell me about education reform"
-  Agent: Education Minister of Armenia
-  Rewritten: "Armenia education reform ministry current policies"
+✅ CORRECT - Preserves explicit entity:
+- Original: "Ինչ է կարծում Նիկոլը թուրքերի մասին" (What does Nikol think about Turks?)
+  Agent: Ruben Rubinyan, Armenian Parliamentary Deputy
+  Rewritten: "Nikol opinion about Turks Armenia" 
+  ✓ Keeps "Nikol" because it was explicitly mentioned
+
+✅ CORRECT - Adds agent name for indirect reference:
+- Original: "What's your stance on economic policy?"
+  Agent: Ruben Rubinyan, Armenian Parliamentary Deputy
+  Rewritten: "Ruben Rubinyan stance economic policy Armenia parliament"
+  ✓ Uses agent name because "your" is an indirect reference
+
+✅ CORRECT - Adds context without replacing entities:
+- Original: "What did the prime minister say about education?"
+  Agent: Parliamentary Deputy
+  Rewritten: "Armenia prime minister statement education 2024"
+  ✓ Keeps "prime minister", adds country context
+
+❌ WRONG - Replaces explicit entity:
+- Original: "What does Nikol think?"
+  Rewritten: "What does Ruben Rubinyan think?"
+  ✗ Changed "Nikol" to agent's name - this is WRONG
+
+More examples:
+- Original: "What's the latest economic policy?"
+  Agent: Armenian Parliamentary Deputy
+  Rewritten: "latest economic policy Armenia parliament 2024"
 
 - Original: "What happened in the recent session?"
   Agent: Parliamentary Deputy
-  Rewritten: "Armenia parliament recent session decisions"
-
-- Original: "What's the unemployment rate?"
-  Agent: Economics Parliamentary Deputy
-  Rewritten: "Armenia unemployment rate 2024 latest statistics"
+  Rewritten: "Armenia parliament recent session decisions 2024"
 
 Respond with ONLY the rewritten question, no explanation or quotes.
 
