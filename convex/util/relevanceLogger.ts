@@ -1,15 +1,15 @@
 /**
  * Logging system for web search relevance checks
- * Logs all relevance decisions to track when results are filtered
+ * Logs all relevance decisions to the Convex database
  */
 
 import { ActionCtx } from '../_generated/server';
-import * as fs from 'fs';
-import * as path from 'path';
+import { internal } from '../_generated/api';
+import { internalMutation, query } from '../_generated/server';
+import { v } from 'convex/values';
 
 export interface RelevanceLogEntry {
   timestamp: number;
-  timestampISO: string;
   question: string;
   agentName: string;
   agentIdentity?: string;
@@ -24,34 +24,51 @@ export interface RelevanceLogEntry {
 }
 
 /**
- * Logs a relevance check decision to a JSON file
+ * Internal mutation to insert a relevance log entry
+ */
+export const insertLog = internalMutation({
+  args: {
+    timestamp: v.number(),
+    question: v.string(),
+    agentName: v.string(),
+    agentIdentity: v.optional(v.string()),
+    searchResults: v.array(v.object({
+      title: v.string(),
+      url: v.string(),
+      snippet: v.string(),
+    })),
+    decision: v.union(
+      v.literal('RELEVANT'),
+      v.literal('NOT_RELEVANT')
+    ),
+    reasoning: v.string(),
+    rewrittenQuestion: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert('relevanceLogs', args);
+  },
+});
+
+/**
+ * Logs a relevance check decision to the database
+ * @param ctx The action context
  * @param entry The relevance log entry
  */
-export async function logRelevanceCheck(entry: RelevanceLogEntry): Promise<void> {
+export async function logRelevanceCheck(
+  ctx: ActionCtx,
+  entry: RelevanceLogEntry
+): Promise<void> {
   try {
-    const logFilePath = path.join(process.cwd(), 'relevance_logs.json');
-    
-    // Add ISO timestamp
-    entry.timestampISO = new Date(entry.timestamp).toISOString();
-    
-    let logs: RelevanceLogEntry[] = [];
-    
-    // Read existing logs if file exists
-    try {
-      if (fs.existsSync(logFilePath)) {
-        const existingData = fs.readFileSync(logFilePath, 'utf-8');
-        logs = JSON.parse(existingData);
-      }
-    } catch (readError) {
-      console.warn('[RelevanceLogger] Could not read existing logs, starting fresh:', readError);
-      logs = [];
-    }
-    
-    // Add new entry
-    logs.push(entry);
-    
-    // Write back to file
-    fs.writeFileSync(logFilePath, JSON.stringify(logs, null, 2), 'utf-8');
+    await ctx.runMutation(internal.util.relevanceLogger.insertLog, {
+      timestamp: entry.timestamp,
+      question: entry.question,
+      agentName: entry.agentName,
+      agentIdentity: entry.agentIdentity,
+      searchResults: entry.searchResults,
+      decision: entry.decision,
+      reasoning: entry.reasoning,
+      rewrittenQuestion: entry.rewrittenQuestion,
+    });
     
     console.log(`[RelevanceLogger] ✅ Logged relevance check for "${entry.agentName}" - Decision: ${entry.decision}`);
   } catch (error) {
@@ -62,51 +79,110 @@ export async function logRelevanceCheck(entry: RelevanceLogEntry): Promise<void>
 
 /**
  * Get all relevance logs
- * @returns Array of all relevance log entries
  */
-export function getAllRelevanceLogs(): RelevanceLogEntry[] {
-  try {
-    const logFilePath = path.join(process.cwd(), 'relevance_logs.json');
+export const getAllLogs = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
     
-    if (!fs.existsSync(logFilePath)) {
-      return [];
-    }
+    const logs = await ctx.db
+      .query('relevanceLogs')
+      .order('desc')
+      .take(limit);
     
-    const data = fs.readFileSync(logFilePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('[RelevanceLogger] Error reading relevance logs:', error);
-    return [];
-  }
-}
+    return logs.map(log => ({
+      ...log,
+      timestampISO: new Date(log.timestamp).toISOString(),
+    }));
+  },
+});
 
 /**
  * Get relevance logs for a specific agent
- * @param agentName The agent's name
- * @returns Array of relevance log entries for the agent
  */
-export function getRelevanceLogsByAgent(agentName: string): RelevanceLogEntry[] {
-  const allLogs = getAllRelevanceLogs();
-  return allLogs.filter(log => log.agentName === agentName);
-}
+export const getLogsByAgent = query({
+  args: {
+    agentName: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
+    
+    const logs = await ctx.db
+      .query('relevanceLogs')
+      .withIndex('agentName', q => q.eq('agentName', args.agentName))
+      .order('desc')
+      .take(limit);
+    
+    return logs.map(log => ({
+      ...log,
+      timestampISO: new Date(log.timestamp).toISOString(),
+    }));
+  },
+});
+
+/**
+ * Get relevance logs by decision type
+ */
+export const getLogsByDecision = query({
+  args: {
+    decision: v.union(v.literal('RELEVANT'), v.literal('NOT_RELEVANT')),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
+    
+    const logs = await ctx.db
+      .query('relevanceLogs')
+      .withIndex('decision', q => q.eq('decision', args.decision))
+      .order('desc')
+      .take(limit);
+    
+    return logs.map(log => ({
+      ...log,
+      timestampISO: new Date(log.timestamp).toISOString(),
+    }));
+  },
+});
 
 /**
  * Get statistics about relevance checks
- * @returns Object with relevance statistics
  */
-export function getRelevanceStats() {
-  const logs = getAllRelevanceLogs();
-  
-  const totalChecks = logs.length;
-  const relevantCount = logs.filter(l => l.decision === 'RELEVANT').length;
-  const notRelevantCount = logs.filter(l => l.decision === 'NOT_RELEVANT').length;
-  
-  return {
-    totalChecks,
-    relevantCount,
-    notRelevantCount,
-    relevantPercentage: totalChecks > 0 ? (relevantCount / totalChecks) * 100 : 0,
-    notRelevantPercentage: totalChecks > 0 ? (notRelevantCount / totalChecks) * 100 : 0,
-  };
-}
-
+export const getStats = query({
+  handler: async (ctx) => {
+    const allLogs = await ctx.db.query('relevanceLogs').collect();
+    
+    const totalChecks = allLogs.length;
+    const relevantCount = allLogs.filter(l => l.decision === 'RELEVANT').length;
+    const notRelevantCount = allLogs.filter(l => l.decision === 'NOT_RELEVANT').length;
+    
+    // Get per-agent stats
+    const agentStats = new Map<string, { relevant: number; notRelevant: number }>();
+    for (const log of allLogs) {
+      const stats = agentStats.get(log.agentName) || { relevant: 0, notRelevant: 0 };
+      if (log.decision === 'RELEVANT') {
+        stats.relevant++;
+      } else {
+        stats.notRelevant++;
+      }
+      agentStats.set(log.agentName, stats);
+    }
+    
+    return {
+      totalChecks,
+      relevantCount,
+      notRelevantCount,
+      relevantPercentage: totalChecks > 0 ? (relevantCount / totalChecks) * 100 : 0,
+      notRelevantPercentage: totalChecks > 0 ? (notRelevantCount / totalChecks) * 100 : 0,
+      agentStats: Array.from(agentStats.entries()).map(([agentName, stats]) => ({
+        agentName,
+        relevant: stats.relevant,
+        notRelevant: stats.notRelevant,
+        total: stats.relevant + stats.notRelevant,
+        relevantPercentage: ((stats.relevant / (stats.relevant + stats.notRelevant)) * 100).toFixed(1),
+      })),
+    };
+  },
+});

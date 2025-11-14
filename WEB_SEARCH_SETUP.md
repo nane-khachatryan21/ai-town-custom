@@ -59,7 +59,7 @@ just convex
    - Example: "Armenia economy" results → NOT RELEVANT unless they mention the agent
    - Example: "Deputy Rubinyan's economic proposal" → RELEVANT (specifically about agent)
    - **Only if relevant:** Results are summarized and integrated into response
-   - **All decisions logged** to `relevance_logs.json` for tracking
+   - **All decisions logged** to Convex `relevanceLogs` database for tracking
 
 ### Fallback Mechanism
 

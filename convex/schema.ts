@@ -45,6 +45,27 @@ export default defineSchema({
     .index('agentName', ['agentName'])
     .index('success', ['success']),
 
+  relevanceLogs: defineTable({
+    timestamp: v.number(),
+    question: v.string(),
+    agentName: v.string(),
+    agentIdentity: v.optional(v.string()),
+    searchResults: v.array(v.object({
+      title: v.string(),
+      url: v.string(),
+      snippet: v.string(),
+    })),
+    decision: v.union(
+      v.literal('RELEVANT'),
+      v.literal('NOT_RELEVANT')
+    ),
+    reasoning: v.string(),
+    rewrittenQuestion: v.optional(v.string()),
+  })
+    .index('timestamp', ['timestamp'])
+    .index('agentName', ['agentName'])
+    .index('decision', ['decision']),
+
   ...agentTables,
   ...aiTownTables,
   ...engineTables,

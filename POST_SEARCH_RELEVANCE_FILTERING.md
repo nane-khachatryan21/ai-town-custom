@@ -130,30 +130,30 @@ specifically mention this deputy or their involvement.
 
 ## Logging System
 
-### Separate JSON Log File
+### Database-Based Logging
 
-All relevance decisions are logged to `relevance_logs.json`:
+All relevance decisions are logged to the Convex `relevanceLogs` database table:
 
 ```json
-[
-  {
-    "timestamp": 1700000000000,
-    "timestampISO": "2024-11-14T12:00:00.000Z",
-    "question": "What is the economic policy?",
-    "agentName": "Ռուբինյան Ռուբեն Կարապետի",
-    "agentIdentity": "Deputy Speaker of National Assembly...",
-    "searchResults": [
-      {
-        "title": "Armenia's economic reforms",
-        "url": "https://example.com/article",
-        "snippet": "The government announced..."
-      }
-    ],
-    "decision": "NOT_RELEVANT",
-    "reasoning": "Results about Armenia's economy in general, not specifically about Ruben Rubinyan",
-    "rewrittenQuestion": "Armenia parliament economic policy Ruben Rubinyan 2024"
-  }
-]
+{
+  "_id": "...",
+  "_creationTime": 1700000000000,
+  "timestamp": 1700000000000,
+  "timestampISO": "2024-11-14T12:00:00.000Z",
+  "question": "What is the economic policy?",
+  "agentName": "Ռուբինյան Ռուբեն Կարապետի",
+  "agentIdentity": "Deputy Speaker of National Assembly...",
+  "searchResults": [
+    {
+      "title": "Armenia's economic reforms",
+      "url": "https://example.com/article",
+      "snippet": "The government announced..."
+    }
+  ],
+  "decision": "NOT_RELEVANT",
+  "reasoning": "Results about Armenia's economy in general, not specifically about Ruben Rubinyan",
+  "rewrittenQuestion": "Armenia parliament economic policy Ruben Rubinyan 2024"
+}
 ```
 
 ### Log Entry Fields
@@ -232,17 +232,29 @@ Same flow as proactive, but triggered when agent initially says they can't answe
 
 ### View Relevance Stats
 
-The logger provides statistics:
+Get statistics from the database:
 
-```typescript
-getRelevanceStats()
-// Returns:
+```bash
+just convex run exportRelevanceLogs:getStatistics
+```
+
+Returns:
+```json
 {
-  totalChecks: 50,
-  relevantCount: 15,
-  notRelevantCount: 35,
-  relevantPercentage: 30.0,
-  notRelevantPercentage: 70.0
+  "totalChecks": 50,
+  "relevantCount": 15,
+  "notRelevantCount": 35,
+  "relevantPercentage": 30.0,
+  "notRelevantPercentage": 70.0,
+  "agentStats": [
+    {
+      "agentName": "Ռուբինյան Ռուբեն Կարապետի",
+      "relevant": 5,
+      "notRelevant": 10,
+      "total": 15,
+      "relevantPercentage": "33.3"
+    }
+  ]
 }
 ```
 
@@ -251,18 +263,27 @@ This helps understand:
 - Which agents get more specific vs general results
 - If search strategies need adjustment
 
-### Filter Logs by Agent
+### Export Logs
 
-```typescript
-getRelevanceLogsByAgent("Ռուբինյան Ռուբեն Կարապետի")
-// Returns all relevance checks for this agent
+```bash
+# Export all logs
+just convex run exportRelevanceLogs:exportToJSON > relevance_logs.json
+
+# Export by agent
+just convex run exportRelevanceLogs:exportByAgent '{"agentName": "Ռուբինյան Ռուբեն Կարապետի"}' > agent_relevance.json
+
+# Export only not relevant decisions
+just convex run exportRelevanceLogs:exportByDecision '{"decision": "NOT_RELEVANT"}' > filtered_logs.json
 ```
 
 ## Configuration
 
-### File Location
+### Database Storage
 
-`relevance_logs.json` is created in the project root directory and added to `.gitignore`.
+Relevance logs are stored in the Convex `relevanceLogs` table with indices on:
+- `timestamp` (for time-based queries)
+- `agentName` (for agent-specific queries)
+- `decision` (for filtering by RELEVANT/NOT_RELEVANT)
 
 ### Relevance Criteria
 
@@ -332,7 +353,8 @@ If generic results are passing through:
 - Better logging and tracking of relevance decisions
 
 ✅ **Where It's Logged:**
-- All decisions logged to `relevance_logs.json`
+- All decisions logged to Convex `relevanceLogs` database table
 - Includes full context: question, results, decision, reasoning
-- Separate from web search logs for clarity
+- Separate table from web search logs for clarity
+- Export to JSON with: `just convex run exportRelevanceLogs:exportToJSON`
 
