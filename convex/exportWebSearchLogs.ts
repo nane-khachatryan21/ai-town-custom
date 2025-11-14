@@ -10,12 +10,12 @@ import { v } from 'convex/values';
 /**
  * Export all web search logs to JSON format
  */
-export const exportToJSON = action({
+export const exportToJSON: any = action({
   args: {
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const logs = await ctx.runQuery(api.util.webSearchLogger.getAllLogs, {
+    const logs: any = await ctx.runQuery(api.util.webSearchLogger.getAllLogs, {
       limit: args.limit,
     });
     

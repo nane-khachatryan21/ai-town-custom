@@ -164,7 +164,7 @@ export async function startConversationMessage(
   );
 
   const memoryWithOtherPlayer = memories.find(
-    (m) => m.data.type === 'conversation' && m.data.playerIds.includes(otherPlayerId),
+    (m: any) => m.data.type === 'conversation' && m.data.playerIds.includes(otherPlayerId),
   );
   
   // Two-step system: First check if web search is needed
