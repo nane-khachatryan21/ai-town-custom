@@ -2,7 +2,7 @@
  * Test functions for web search functionality
  */
 
-import { action } from './_generated/server';
+import { action, internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { performWebSearch, filterAndFormatResults } from './util/webSearch';
 import { internal } from './_generated/api';
@@ -488,7 +488,7 @@ Your expertise includes: economics, law, education, healthcare, foreign relation
  * Internal helper action to check relevance
  * Used by testRelevanceFiltering
  */
-export const checkRelevanceInternal = action({
+export const checkRelevanceInternal = internalAction({
   args: {
     question: v.string(),
     agentIdentity: v.string(),
