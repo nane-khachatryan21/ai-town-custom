@@ -42,20 +42,24 @@ just convex
 
 ### Four-Step Intelligent System
 
-1. **Relevance Check**: First, an LLM determines if the question is relevant to the agent's persona and domain
-   - Questions about unrelated topics (e.g., "What's the best pizza recipe?" to a parliamentary deputy) are filtered out
-   - Only relevant questions proceed to the next step
-   
-2. **Knowledge Gap Detection**: For relevant questions, the agent evaluates whether it needs external information
+1. **Knowledge Gap Detection**: The agent evaluates whether it needs external information
    - Personal/opinion questions: Can be answered from the agent's character
    - Current/factual questions: Need web search
    
-3. **Question Rewriting** (NEW!): Before searching, the question is rewritten to be more specific to the agent's context
-   - Example: "What's the latest economic policy?" → "latest economic policy Armenia parliament 2024"
-   - Incorporates agent's role, country, and expertise
-   - Produces more relevant search results
+2. **Question Rewriting**: Before searching, the question is rewritten to be more specific to the agent's context
+   - Example: "What's the latest economic policy?" → "latest economic policy Armenia parliament Ruben Rubinyan 2024"
+   - Incorporates agent's NAME, role, country, and expertise
+   - Produces more targeted search results
    
-4. **Smart Web Search**: The rewritten query is searched and results are integrated into the agent's response
+3. **Web Search Execution**: The rewritten query is searched and results are retrieved
+
+4. **Post-Search Relevance Filtering** (NEW!): After getting results, an LLM determines if they're specifically about THIS agent
+   - Checks if results mention the agent by NAME
+   - Filters out generic results not directly about the agent
+   - Example: "Armenia economy" results → NOT RELEVANT unless they mention the agent
+   - Example: "Deputy Rubinyan's economic proposal" → RELEVANT (specifically about agent)
+   - **Only if relevant:** Results are summarized and integrated into response
+   - **All decisions logged** to `relevance_logs.json` for tracking
 
 ### Fallback Mechanism
 
@@ -101,28 +105,37 @@ When web search is disabled, you'll see:
 ```
 
 When enabled, you'll see detailed logs for:
-- 🎯 Relevance check (is the question relevant to agent's domain?)
-- ⛔ Questions filtered out as irrelevant
 - ✅ Knowledge gap detection (needs web search or not)
-- 📝 Question rewriting (original → contextual)
+- 📝 Question rewriting (original → contextual with agent name)
 - 🔍 Search execution
-- 📊 Result filtering and summarization
+- 🎯 **Post-search relevance check** (are results about THIS agent?)
+- ⛔ Results filtered out as not agent-specific
+- 📊 Result summarization (only if relevant)
 - 🔄 Fallback triggers
 
-Example log flow for a relevant question that needs search:
+Example log flow for results that ARE about the agent:
 ```
-[WebSearch] 🎯 Relevance check: "What's the latest economic policy?" | Relevant to agent: true
 [WebSearch] ✅ Question needs web search: true
 [WebSearch] 📝 Question rewritten:
-[WebSearch]    Original: "What's the latest economic policy?"
-[WebSearch]    Rewritten: "latest economic policy Armenia parliament 2024"
-[WebSearch] 🔍 Performing DuckDuckGo search for: "latest economic policy Armenia parliament 2024"
-[WebSearch] 📊 Found 5 search results, filtering for relevance...
+[WebSearch]    Original: "What are your foreign relations activities?"
+[WebSearch]    Rewritten: "Ruben Rubinyan foreign relations Armenia parliament 2024"
+[WebSearch] 🔍 Performing DuckDuckGo search...
+[WebSearch] 🎯 Results Relevance Check for Ruben Rubinyan:
+[WebSearch]    Decision: RELEVANT ✅
+[WebSearch]    Reasoning: Results directly mention and discuss Ruben Rubinyan's foreign relations work.
+[WebSearch] ✅ Web context successfully added to agent's knowledge
 ```
 
-Example log flow for an irrelevant question:
+Example log flow for results that are NOT about the agent:
 ```
-[WebSearch] 🎯 Relevance check: "What's the best pizza recipe?" | Relevant to agent: false
-[WebSearch] ⛔ Question not relevant to agent's domain - skipping web search
+[WebSearch] ✅ Question needs web search: true
+[WebSearch] 📝 Question rewritten:
+[WebSearch]    Original: "What's the economic situation?"
+[WebSearch]    Rewritten: "Armenia economic situation parliament 2024 Ruben Rubinyan"
+[WebSearch] 🔍 Performing DuckDuckGo search...
+[WebSearch] 🎯 Results Relevance Check for Ruben Rubinyan:
+[WebSearch]    Decision: NOT RELEVANT ⛔
+[WebSearch]    Reasoning: Results about Armenia's economy generally, without specific mention of this deputy.
+[WebSearch] ⛔ Results not relevant to Ruben Rubinyan, skipping summarization
 ```
 

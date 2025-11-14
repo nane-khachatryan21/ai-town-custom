@@ -6174,3 +6174,6 @@
 [2m2025-11-14T17:52:33.873065Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:57708 "GET /api/stream_function_logs?cursor=1763142693858.984 HTTP/1.1" 200 "-" "node" application/json - 6.068ms
 [2m2025-11-14T17:52:33.875960Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:57589 "GET /api/stream_function_logs?cursor=1763142753872.925 HTTP/1.1" 200 "-" "node" application/json - 1.146ms
 [2m2025-11-14T17:53:33.865911Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:57708 "GET /api/stream_function_logs?cursor=1763142753875.878 HTTP/1.1" 200 "-" "node" application/json - 59989.082ms
+[2m2025-11-14T17:54:33.875153Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:57754 "GET /api/stream_function_logs?cursor=1763142813865.745 HTTP/1.1" 200 "-" "node" application/json - 59987.889ms
+[2m2025-11-14T17:55:33.870525Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:57830 "GET /api/stream_function_logs?cursor=1763142873875 HTTP/1.1" 200 "-" "node" application/json - 59984.467ms
+[2m2025-11-14T17:56:33.859981Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:57882 "GET /api/stream_function_logs?cursor=1763142933870.304 HTTP/1.1" 200 "-" "node" application/json - 59986.088ms
