@@ -59,6 +59,7 @@ import type * as util_isSimpleObject from "../util/isSimpleObject.js";
 import type * as util_llm from "../util/llm.js";
 import type * as util_minheap from "../util/minheap.js";
 import type * as util_object from "../util/object.js";
+import type * as util_relevanceLogger from "../util/relevanceLogger.js";
 import type * as util_sleep from "../util/sleep.js";
 import type * as util_types from "../util/types.js";
 import type * as util_webSearch from "../util/webSearch.js";
@@ -120,6 +121,7 @@ declare const fullApi: ApiFromModules<{
   "util/llm": typeof util_llm;
   "util/minheap": typeof util_minheap;
   "util/object": typeof util_object;
+  "util/relevanceLogger": typeof util_relevanceLogger;
   "util/sleep": typeof util_sleep;
   "util/types": typeof util_types;
   "util/webSearch": typeof util_webSearch;
