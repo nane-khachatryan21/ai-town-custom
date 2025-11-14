@@ -24,57 +24,36 @@ export async function performWebSearch(query: string): Promise<SearchResult[]> {
   console.log(`[WebSearch] Timestamp: ${new Date().toISOString()}`);
   
   try {
-    // Using DuckDuckGo Instant Answer API (free, no API key required)
+    // Scrape DuckDuckGo HTML search results page
     const encodedQuery = encodeURIComponent(query);
-    const apiUrl = `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`;
-    console.log(`[WebSearch] API URL: ${apiUrl}`);
-    console.log(`[WebSearch] Attempting fetch...`);
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
+    console.log(`[WebSearch] 🌐 Fetching HTML: ${searchUrl}`);
     
-    const response = await fetch(apiUrl, {
+    const response = await fetch(searchUrl, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'identity',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
       },
     });
     
-    console.log(`[WebSearch] Fetch completed, status: ${response.status}`);
+    console.log(`[WebSearch] ✅ Response received: ${response.status}`);
     
     if (!response.ok) {
       console.warn(`[WebSearch] ❌ Search failed: ${response.statusText} (${response.status})`);
       return [];
     }
     
-    console.log(`[WebSearch] ✅ API response received (${response.status})`);
+    const html = await response.text();
+    console.log(`[WebSearch] 📄 HTML received: ${(html.length / 1024).toFixed(1)}KB`);
     
-    const data = await response.json();
-    const results: SearchResult[] = [];
-    
-    // Extract results from DuckDuckGo response
-    if (data.AbstractText && data.AbstractText.trim()) {
-      console.log(`[WebSearch] 📄 Found abstract: "${data.Heading || 'Summary'}"`);
-      results.push({
-        title: data.Heading || 'Summary',
-        snippet: data.AbstractText,
-        url: data.AbstractURL || '',
-      });
-    }
-    
-    // Add related topics
-    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-      console.log(`[WebSearch] 📚 Found ${data.RelatedTopics.length} related topics`);
-      let addedTopics = 0;
-      for (const topic of data.RelatedTopics.slice(0, 3)) {
-        if (topic.Text && topic.FirstURL) {
-          results.push({
-            title: topic.Text.split(' - ')[0] || 'Related',
-            snippet: topic.Text,
-            url: topic.FirstURL,
-          });
-          addedTopics++;
-          console.log(`[WebSearch]   └─ Topic ${addedTopics}: ${topic.Text.split(' - ')[0]}`);
-        }
-      }
-    }
+    // Parse HTML to extract search results
+    const results = parseSearchResults(html);
     
     const duration = Date.now() - startTime;
     console.log(`[WebSearch] ✅ Search completed in ${duration}ms`);
@@ -84,6 +63,12 @@ export async function performWebSearch(query: string): Promise<SearchResult[]> {
     if (finalResults.length < results.length) {
       console.log(`[WebSearch] ✂️ Trimmed to top ${finalResults.length} results`);
     }
+    
+    // Log each result
+    finalResults.forEach((result, idx) => {
+      console.log(`[WebSearch]   ${idx + 1}. ${result.title.slice(0, 60)}${result.title.length > 60 ? '...' : ''}`);
+      console.log(`[WebSearch]      ${result.url}`);
+    });
     
     return finalResults;
   } catch (error) {
@@ -95,6 +80,118 @@ export async function performWebSearch(query: string): Promise<SearchResult[]> {
       console.error(`[WebSearch] Stack trace:`, error.stack);
     }
     console.error(`[WebSearch] Full error:`, error);
+    return [];
+  }
+}
+
+/**
+ * Parses DuckDuckGo HTML to extract search results
+ * @param html The HTML content from DuckDuckGo
+ * @returns Array of parsed search results
+ */
+function parseSearchResults(html: string): SearchResult[] {
+  console.log(`[WebSearch] 🔍 Parsing HTML for search results...`);
+  const results: SearchResult[] = [];
+  
+  try {
+    // DuckDuckGo HTML uses the class "result" for each search result
+    // Each result has: title link, URL, and snippet
+    
+    // Method 1: Split by result divs
+    const resultSections = html.split('<div class="result ');
+    console.log(`[WebSearch] Found ${resultSections.length - 1} potential result sections`);
+    
+    for (let i = 1; i < resultSections.length && results.length < 10; i++) {
+      const section = resultSections[i];
+      
+      try {
+        // Extract title and URL from the main link
+        const linkMatch = section.match(/<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)<\/a>/s);
+        if (!linkMatch) continue;
+        
+        let url = linkMatch[1];
+        let titleHtml = linkMatch[2];
+        
+        // Decode DuckDuckGo's URL redirect
+        if (url.includes('uddg=')) {
+          const uddgMatch = url.match(/uddg=([^&]+)/);
+          if (uddgMatch) {
+            try {
+              url = decodeURIComponent(uddgMatch[1]);
+            } catch (e) {
+              console.log(`[WebSearch] Failed to decode URL: ${url}`);
+              continue;
+            }
+          }
+        }
+        
+        // Skip non-http URLs
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          continue;
+        }
+        
+        // Clean title (remove HTML tags and decode entities)
+        let title = titleHtml
+          .replace(/<[^>]+>/g, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&#x27;/g, "'")
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Extract snippet
+        let snippet = '';
+        const snippetMatch = section.match(/<a[^>]+class="result__snippet"[^>]*>(.*?)<\/a>/s);
+        if (snippetMatch) {
+          snippet = snippetMatch[1]
+            .replace(/<[^>]+>/g, '')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&#x27;/g, "'")
+            .replace(/&nbsp;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+        
+        // Alternative snippet location
+        if (!snippet) {
+          const altSnippetMatch = section.match(/<div[^>]+class="[^"]*result__snippet[^"]*"[^>]*>(.*?)<\/div>/s);
+          if (altSnippetMatch) {
+            snippet = altSnippetMatch[1]
+              .replace(/<[^>]+>/g, '')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&#x27;/g, "'")
+              .replace(/&nbsp;/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+        }
+        
+        if (title && url) {
+          results.push({ title, snippet: snippet || 'No description available', url });
+          console.log(`[WebSearch]   ✓ Result ${results.length}: ${title.slice(0, 50)}...`);
+        }
+      } catch (err) {
+        console.log(`[WebSearch]   ⚠️ Failed to parse result ${i}: ${err}`);
+        continue;
+      }
+    }
+    
+    console.log(`[WebSearch] 📊 Successfully parsed ${results.length} results`);
+    return results;
+  } catch (error) {
+    console.error(`[WebSearch] ❌ Error parsing HTML:`, error);
     return [];
   }
 }
