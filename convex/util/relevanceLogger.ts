@@ -53,7 +53,7 @@ export async function logRelevanceCheck(entry: RelevanceLogEntry): Promise<void>
     // Write back to file
     fs.writeFileSync(logFilePath, JSON.stringify(logs, null, 2), 'utf-8');
     
-    console.log(`[RelevanceLogger] ✅ Logged relevance check for "${agentName}" - Decision: ${entry.decision}`);
+    console.log(`[RelevanceLogger] ✅ Logged relevance check for "${entry.agentName}" - Decision: ${entry.decision}`);
   } catch (error) {
     console.error('[RelevanceLogger] ❌ Failed to log relevance check:', error);
     // Don't throw - logging failure shouldn't break the main flow
