@@ -1,55 +1,56 @@
-[2m2025-11-14T15:49:20.662581Z[0m [32m INFO[0m [2mconvex_local_backend[0m[2m:[0m Starting a Convex backend
-[2m2025-11-14T15:49:20.662712Z[0m [32m INFO[0m [2mconvex_local_backend[0m[2m:[0m The self-host Convex backend will periodically communicate with a remote beacon server. This is to help Convex understand and improve the product. You can disable this telemetry by setting the --disable-beacon flag or the DISABLE_BEACON environment variable.
-[2m2025-11-14T15:49:20.662792Z[0m [32m INFO[0m [2mconvex_local_backend[0m[2m:[0m Sentry is not enabled.
-[2m2025-11-14T15:49:20.668426Z[0m [32m INFO[0m [2mdb_connection[0m[2m:[0m Connected to SQLite at convex_local_backend.sqlite3
-[2m2025-11-14T15:49:20.670547Z[0m [32m INFO[0m [2msearch::searcher::searcher[0m[2m:[0m Searchlight starting, local_storage_path: /var/folders/kv/r_1rjt7x44v5wpg4l4jz3vh00000gp/T/.tmpkof7n2 max_size: 500.0 MiB
-[2m2025-11-14T15:49:20.674038Z[0m [32m INFO[0m [2mdatabase::database[0m[2m:[0m Bootstrapping indexes...
-[2m2025-11-14T15:49:20.675034Z[0m [32m INFO[0m [2mindexing::backend_in_memory_indexes[0m[2m:[0m Loading 8 tables with 21 indexes...
-[2m2025-11-14T15:49:20.675294Z[0m [32m INFO[0m [2mdatabase::database[0m[2m:[0m Bootstrapping table metadata...
-[2m2025-11-14T15:49:20.676730Z[0m [32m INFO[0m [2mdatabase::subscription[0m[2m:[0m Starting subscriptions worker
-[2m2025-11-14T15:49:20.677455Z[0m [32m INFO[0m [2mindexing::backend_in_memory_indexes[0m[2m:[0m Loading 12 tables with 31 indexes...
-[2m2025-11-14T15:49:20.678830Z[0m [32m INFO[0m [2mdatabase::committer[0m[2m:[0m Loaded indexes into memory
-[2m2025-11-14T15:49:20.679049Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m files storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/files"
-[2m2025-11-14T15:49:20.679184Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m modules storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/modules"
-[2m2025-11-14T15:49:20.679289Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m search storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/search"
-[2m2025-11-14T15:49:20.679340Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m exports storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/exports"
-[2m2025-11-14T15:49:20.679394Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m snapshot_imports storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/snapshot_imports"
-[2m2025-11-14T15:49:20.679420Z[0m [32m INFO[0m [2mdatabase::database[0m[2m:[0m Set search storage to LocalDirStorage { dir: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/search" }
-[2m2025-11-14T15:49:20.679448Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m Local { dir: "convex_local_storage" } storage is configured.
-[2m2025-11-14T15:49:20.679459Z[0m [33m WARN[0m [2mlocal_backend[0m[2m:[0m Running without a proxy in release mode -- UDF `fetch` requests are unrestricted!
-[2m2025-11-14T15:49:20.717240Z[0m [32m INFO[0m [2mdatabase::database_index_workers[0m[2m:[0m Starting IndexWorker
-[2m2025-11-14T15:49:20.717297Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting FastForwardWorker
-[2m2025-11-14T15:49:20.717317Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting VectorBackfillFlusher
-[2m2025-11-14T15:49:20.717322Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting VectorLiveFlusher
-[2m2025-11-14T15:49:20.717326Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting TextLiveFlusher
-[2m2025-11-14T15:49:20.717328Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting TextBackfillFlusher
-[2m2025-11-14T15:49:20.717330Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting VectorCompactor
-[2m2025-11-14T15:49:20.717359Z[0m [32m INFO[0m [2mapplication::system_table_cleanup[0m[2m:[0m Starting SystemTableCleanupWorker
-[2m2025-11-14T15:49:20.717342Z[0m [32m INFO[0m [2mapplication::schema_worker[0m[2m:[0m Starting SchemaWorker
-[2m2025-11-14T15:49:20.717350Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Starting background table summary worker
-[2m2025-11-14T15:49:20.717353Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Starting LogManager
-[2m2025-11-14T15:49:20.717329Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting TextCompactor
-[2m2025-11-14T15:49:20.717417Z[0m [32m INFO[0m [2mapplication::scheduled_jobs[0m[2m:[0m Starting scheduled job executor
-[2m2025-11-14T15:49:20.717419Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Starting listening for logs
-[2m2025-11-14T15:49:20.717431Z[0m [32m INFO[0m [2mapplication::cron_jobs[0m[2m:[0m Starting cron job executor
-[2m2025-11-14T15:49:20.717469Z[0m [32m INFO[0m [2mdatabase::search_index_bootstrap[0m[2m:[0m Starting search index bootstrap at 1763135360671253000 with upper bound 1763135360671253000
-[2m2025-11-14T15:49:20.717480Z[0m [32m INFO[0m [2mlocal_backend::beacon[0m[2m:[0m Starting beacon coroutine...
-[2m2025-11-14T15:49:20.717477Z[0m [32m INFO[0m [2mmodel::migrations[0m[2m:[0m Attempting migration
-[2m2025-11-14T15:49:20.717516Z[0m [32m INFO[0m [2mdatabase::search_index_bootstrap[0m[2m:[0m Loaded 0 revisions (0 bytes) in 138.167µs.
-[2m2025-11-14T15:49:20.717585Z[0m [32m INFO[0m [2mdatabase::committer[0m[2m:[0m Committed backfilled vector indexes
-[2m2025-11-14T15:49:20.717592Z[0m [32m INFO[0m [2mdatabase::search_index_bootstrap[0m[2m:[0m SearchIndexBoostrapWorker finished!
-[2m2025-11-14T15:49:20.717602Z[0m [32m INFO[0m [2mmodel::migrations[0m[2m:[0m db metadata version up to date at 122
-[2m2025-11-14T15:49:20.717611Z[0m [32m INFO[0m [2mmodel::migrations[0m[2m:[0m Migration complete
-[2m2025-11-14T15:49:20.717615Z[0m [32m INFO[0m [2mdatabase::database_index_workers[0m[2m:[0m 0 database indexes to backfill @ 1763135360671253000
-[2m2025-11-14T15:49:20.717984Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Found 0 sink(s) in `Tombstoned` state
-[2m2025-11-14T15:49:20.717990Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Found 0 sink(s) in Pending state.
-[2m2025-11-14T15:49:20.717993Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Found 0 inactive sink(s).
-[2m2025-11-14T15:49:20.718532Z[0m [32m INFO[0m [2mapplication::exports::worker[0m[2m:[0m No exports requested or in progress.
-[2m2025-11-14T15:49:20.719011Z[0m [32m INFO[0m [2mcommon::http[0m[2m:[0m backend listening on 0.0.0.0:3210
-[2m2025-11-14T15:49:20.719013Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Writing table summary checkpoint at ts 1763135360671253000
-[2m2025-11-14T15:49:20.719123Z[0m [32m INFO[0m [2mlocal_backend::proxy[0m[2m:[0m Starting dev site proxy at 0.0.0.0:3211...
-[2m2025-11-14T15:49:20.719159Z[0m [32m INFO[0m [2mcommon::http[0m[2m:[0m backend_http_proxy listening on 0.0.0.0:3211
-[2m2025-11-14T15:49:20.720106Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Finishing table summary bootstrap
-[2m2025-11-14T15:49:20.721101Z[0m [32m INFO[0m [2mdatabase::committer[0m[2m:[0m Bootstrapped table summaries at ts 1763135360671253000
-[2m2025-11-14T15:49:20.721114Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Table summary bootstrap finished
-[2m2025-11-14T15:49:21.638537Z[0m [32m INFO[0m [2mlocal_backend::beacon[0m[2m:[0m Beacon request with json {"database_uuid":"h02c4p0mj1e4t64en8ccz4rkvd7vdc7k","migration_version":122,"compiled_revision":"a78fd1e201dab11a0a1fb9f84ebc8ea635127e26","commit_timestamp":"2025-10-29T19:27:02.000000000Z","uptime":0,"beacon_tag":"self-host","beacon_fields":null} sent successfully to https://api.convex.dev/api/self_host_beacon. This anonymized data is used to help Convex understand and improve the product. You can disable this telemetry by setting the --disable-beacon flag or the DISABLE_BEACON environment variable.
+[2m2025-11-14T15:56:51.184550Z[0m [32m INFO[0m [2mconvex_local_backend[0m[2m:[0m Starting a Convex backend
+[2m2025-11-14T15:56:51.185675Z[0m [32m INFO[0m [2mconvex_local_backend[0m[2m:[0m The self-host Convex backend will periodically communicate with a remote beacon server. This is to help Convex understand and improve the product. You can disable this telemetry by setting the --disable-beacon flag or the DISABLE_BEACON environment variable.
+[2m2025-11-14T15:56:51.187062Z[0m [32m INFO[0m [2mconvex_local_backend[0m[2m:[0m Sentry is not enabled.
+[2m2025-11-14T15:56:51.196047Z[0m [32m INFO[0m [2mdb_connection[0m[2m:[0m Connected to SQLite at convex_local_backend.sqlite3
+[2m2025-11-14T15:56:51.198608Z[0m [32m INFO[0m [2msearch::searcher::searcher[0m[2m:[0m Searchlight starting, local_storage_path: /var/folders/kv/r_1rjt7x44v5wpg4l4jz3vh00000gp/T/.tmpC4t5Ch max_size: 500.0 MiB
+[2m2025-11-14T15:56:51.211907Z[0m [32m INFO[0m [2mdatabase::database[0m[2m:[0m Bootstrapping indexes...
+[2m2025-11-14T15:56:51.218190Z[0m [32m INFO[0m [2mindexing::backend_in_memory_indexes[0m[2m:[0m Loading 8 tables with 21 indexes...
+[2m2025-11-14T15:56:51.219181Z[0m [32m INFO[0m [2mdatabase::database[0m[2m:[0m Bootstrapping table metadata...
+[2m2025-11-14T15:56:51.221994Z[0m [32m INFO[0m [2mdatabase::subscription[0m[2m:[0m Starting subscriptions worker
+[2m2025-11-14T15:56:51.227336Z[0m [32m INFO[0m [2mindexing::backend_in_memory_indexes[0m[2m:[0m Loading 12 tables with 31 indexes...
+[2m2025-11-14T15:56:51.227693Z[0m [32m INFO[0m [2mdatabase::committer[0m[2m:[0m Loaded indexes into memory
+[2m2025-11-14T15:56:51.230406Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m files storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/files"
+[2m2025-11-14T15:56:51.230455Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m modules storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/modules"
+[2m2025-11-14T15:56:51.230479Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m search storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/search"
+[2m2025-11-14T15:56:51.230502Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m exports storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/exports"
+[2m2025-11-14T15:56:51.230525Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m snapshot_imports storage path: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/snapshot_imports"
+[2m2025-11-14T15:56:51.230542Z[0m [32m INFO[0m [2mdatabase::database[0m[2m:[0m Set search storage to LocalDirStorage { dir: "/Users/earakelyan/Documents/nvidia/hack_democracy/ai-town-custom/convex_local_storage/search" }
+[2m2025-11-14T15:56:51.230570Z[0m [32m INFO[0m [2mapplication[0m[2m:[0m Local { dir: "convex_local_storage" } storage is configured.
+[2m2025-11-14T15:56:51.230589Z[0m [33m WARN[0m [2mlocal_backend[0m[2m:[0m Running without a proxy in release mode -- UDF `fetch` requests are unrestricted!
+[2m2025-11-14T15:56:51.297082Z[0m [32m INFO[0m [2mdatabase::database_index_workers[0m[2m:[0m Starting IndexWorker
+[2m2025-11-14T15:56:51.297121Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting FastForwardWorker
+[2m2025-11-14T15:56:51.297142Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting VectorBackfillFlusher
+[2m2025-11-14T15:56:51.297152Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting VectorCompactor
+[2m2025-11-14T15:56:51.297156Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting TextBackfillFlusher
+[2m2025-11-14T15:56:51.297152Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting VectorLiveFlusher
+[2m2025-11-14T15:56:51.297174Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Starting background table summary worker
+[2m2025-11-14T15:56:51.297188Z[0m [32m INFO[0m [2mapplication::schema_worker[0m[2m:[0m Starting SchemaWorker
+[2m2025-11-14T15:56:51.297165Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting TextLiveFlusher
+[2m2025-11-14T15:56:51.297160Z[0m [32m INFO[0m [2mdatabase::search_index_workers::retriable_worker[0m[2m:[0m Starting TextCompactor
+[2m2025-11-14T15:56:51.297287Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Starting LogManager
+[2m2025-11-14T15:56:51.297337Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Starting listening for logs
+[2m2025-11-14T15:56:51.297417Z[0m [32m INFO[0m [2mapplication::system_table_cleanup[0m[2m:[0m Starting SystemTableCleanupWorker
+[2m2025-11-14T15:56:51.297625Z[0m [32m INFO[0m [2mdatabase::search_index_bootstrap[0m[2m:[0m Starting search index bootstrap at 1763135811208937000 with upper bound 1763135811208937000
+[2m2025-11-14T15:56:51.297634Z[0m [32m INFO[0m [2mdatabase::search_index_bootstrap[0m[2m:[0m Loaded 0 revisions (0 bytes) in 82.334µs.
+[2m2025-11-14T15:56:51.297675Z[0m [32m INFO[0m [2mdatabase::committer[0m[2m:[0m Committed backfilled vector indexes
+[2m2025-11-14T15:56:51.297683Z[0m [32m INFO[0m [2mdatabase::search_index_bootstrap[0m[2m:[0m SearchIndexBoostrapWorker finished!
+[2m2025-11-14T15:56:51.297912Z[0m [32m INFO[0m [2mapplication::scheduled_jobs[0m[2m:[0m Starting scheduled job executor
+[2m2025-11-14T15:56:51.297938Z[0m [32m INFO[0m [2mapplication::cron_jobs[0m[2m:[0m Starting cron job executor
+[2m2025-11-14T15:56:51.297978Z[0m [32m INFO[0m [2mmodel::migrations[0m[2m:[0m Attempting migration
+[2m2025-11-14T15:56:51.298244Z[0m [32m INFO[0m [2mlocal_backend::beacon[0m[2m:[0m Starting beacon coroutine...
+[2m2025-11-14T15:56:51.298308Z[0m [32m INFO[0m [2mmodel::migrations[0m[2m:[0m db metadata version up to date at 122
+[2m2025-11-14T15:56:51.298336Z[0m [32m INFO[0m [2mmodel::migrations[0m[2m:[0m Migration complete
+[2m2025-11-14T15:56:51.298845Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Found 0 sink(s) in `Tombstoned` state
+[2m2025-11-14T15:56:51.298895Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Found 0 sink(s) in Pending state.
+[2m2025-11-14T15:56:51.298904Z[0m [32m INFO[0m [2mlog_streaming[0m[2m:[0m Found 0 inactive sink(s).
+[2m2025-11-14T15:56:51.299440Z[0m [32m INFO[0m [2mapplication::exports::worker[0m[2m:[0m No exports requested or in progress.
+[2m2025-11-14T15:56:51.300602Z[0m [32m INFO[0m [2mdatabase::database_index_workers[0m[2m:[0m 0 database indexes to backfill @ 1763135811208937000
+[2m2025-11-14T15:56:51.301007Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Writing table summary checkpoint at ts 1763135811208937000
+[2m2025-11-14T15:56:51.302522Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Finishing table summary bootstrap
+[2m2025-11-14T15:56:51.303549Z[0m [32m INFO[0m [2mdatabase::committer[0m[2m:[0m Bootstrapped table summaries at ts 1763135811208937000
+[2m2025-11-14T15:56:51.303568Z[0m [32m INFO[0m [2mapplication::table_summary_worker[0m[2m:[0m Table summary bootstrap finished
+[2m2025-11-14T15:56:51.308944Z[0m [32m INFO[0m [2mcommon::http[0m[2m:[0m backend listening on 0.0.0.0:3210
+[2m2025-11-14T15:56:51.309040Z[0m [32m INFO[0m [2mlocal_backend::proxy[0m[2m:[0m Starting dev site proxy at 0.0.0.0:3211...
+[2m2025-11-14T15:56:51.309083Z[0m [32m INFO[0m [2mcommon::http[0m[2m:[0m backend_http_proxy listening on 0.0.0.0:3211
+[2m2025-11-14T15:56:52.083614Z[0m [32m INFO[0m [2mlocal_backend::beacon[0m[2m:[0m Beacon request with json {"database_uuid":"h02c4p0mj1e4t64en8ccz4rkvd7vdc7k","migration_version":122,"compiled_revision":"a78fd1e201dab11a0a1fb9f84ebc8ea635127e26","commit_timestamp":"2025-10-29T19:27:02.000000000Z","uptime":0,"beacon_tag":"self-host","beacon_fields":null} sent successfully to https://api.convex.dev/api/self_host_beacon. This anonymized data is used to help Convex understand and improve the product. You can disable this telemetry by setting the --disable-beacon flag or the DISABLE_BEACON environment variable.
+[2m2025-11-14T15:57:01.239933Z[0m [32m INFO[0m [2mconvex-cloud-http[0m[2m:[0m [] 127.0.0.1:49481 "GET /api/1.11.2/sync HTTP/1.1" 101 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" - - 3.600ms

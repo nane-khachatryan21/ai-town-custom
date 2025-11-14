@@ -40,13 +40,13 @@ export const exportToJSON: any = action({
 /**
  * Export logs for a specific agent
  */
-export const exportByAgent = action({
+export const exportByAgent: any = action({
   args: {
     agentName: v.string(),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const logs = await ctx.runQuery(api.util.webSearchLogger.getLogsByAgent, {
+    const logs: any = await ctx.runQuery(api.util.webSearchLogger.getLogsByAgent, {
       agentName: args.agentName,
       limit: args.limit,
     });
@@ -73,13 +73,13 @@ export const exportByAgent = action({
 /**
  * Export logs for a specific time range
  */
-export const exportByTimeRange = action({
+export const exportByTimeRange: any = action({
   args: {
     startTime: v.number(),
     endTime: v.number(),
   },
   handler: async (ctx, args) => {
-    const logs = await ctx.runQuery(api.util.webSearchLogger.getLogsByTimeRange, {
+    const logs: any = await ctx.runQuery(api.util.webSearchLogger.getLogsByTimeRange, {
       startTime: args.startTime,
       endTime: args.endTime,
     });
@@ -109,9 +109,9 @@ export const exportByTimeRange = action({
 /**
  * Get statistics about web searches
  */
-export const getStatistics = action({
+export const getStatistics: any = action({
   handler: async (ctx) => {
-    const stats = await ctx.runQuery(api.util.webSearchLogger.getStats);
+    const stats: any = await ctx.runQuery(api.util.webSearchLogger.getStats);
     
     console.log('\n' + '='.repeat(80));
     console.log('WEB SEARCH STATISTICS');
