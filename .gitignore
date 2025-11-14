@@ -47,3 +47,4 @@ convex_local*
 # Local development logs
 backend.log
 frontend.log
+logs.json

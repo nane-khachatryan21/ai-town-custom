@@ -124,10 +124,24 @@ Logs are stored in the `webSearchLogs` table with indices on:
 To save logs to a file:
 
 ```bash
-just convex run exportWebSearchLogs:exportToJSON > web_search_logs.json
+just convex run exportWebSearchLogs:exportToJSON > logs.json
 ```
 
-The export functions output clean JSON without decorative borders or extra text, making it easy to pipe directly to files or process with tools like `jq`.
+The export functions return pure data objects - Convex automatically formats them as JSON. This makes it easy to:
+
+```bash
+# Export all logs
+just convex run exportWebSearchLogs:exportToJSON > logs.json
+
+# Filter with jq
+just convex run exportWebSearchLogs:exportToJSON | jq '.[] | select(.success == true)'
+
+# Export by agent
+just convex run exportWebSearchLogs:exportByAgent '{"agentName": "Agent Name"}' > agent_logs.json
+
+# Get statistics
+just convex run exportWebSearchLogs:getStatistics
+```
 
 ## Analyzing Logs
 
