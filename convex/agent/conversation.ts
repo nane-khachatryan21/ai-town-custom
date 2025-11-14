@@ -364,9 +364,8 @@ export async function startConversationMessage(
         );
         
         // Log the relevance decision
-        await logRelevanceCheck({
+        await logRelevanceCheck(ctx, {
           timestamp: searchStartTime,
-          timestampISO: new Date(searchStartTime).toISOString(),
           question: lastOtherPlayerMessage.text,
           agentName: player.name,
           agentIdentity: agent?.identity,
@@ -497,9 +496,8 @@ export async function startConversationMessage(
         );
         
         // Log the relevance decision
-        await logRelevanceCheck({
+        await logRelevanceCheck(ctx, {
           timestamp: fallbackStartTime,
-          timestampISO: new Date(fallbackStartTime).toISOString(),
           question: lastOtherPlayerMessage.text,
           agentName: player.name,
           agentIdentity: agent?.identity,
@@ -678,9 +676,8 @@ export async function continueConversationMessage(
         );
         
         // Log the relevance decision
-        await logRelevanceCheck({
+        await logRelevanceCheck(ctx, {
           timestamp: searchStartTime,
-          timestampISO: new Date(searchStartTime).toISOString(),
           question: lastOtherPlayerMessage.text,
           agentName: player.name,
           agentIdentity: agent?.identity,
@@ -819,9 +816,8 @@ export async function continueConversationMessage(
         );
         
         // Log the relevance decision
-        await logRelevanceCheck({
+        await logRelevanceCheck(ctx, {
           timestamp: fallbackStartTime,
-          timestampISO: new Date(fallbackStartTime).toISOString(),
           question: lastOtherPlayerMessage.text,
           agentName: player.name,
           agentIdentity: agent?.identity,
