@@ -42,7 +42,7 @@ export default function Game() {
   return (
     <>
       {SHOW_DEBUG_UI && <DebugTimeManager timeManager={timeManager} width={200} height={100} />}
-      <div className="mx-auto w-full max-w grid grid-rows-[240px_1fr] lg:grid-rows-[1fr] lg:grid-cols-[1fr_auto] lg:grow max-w-[1400px] min-h-[480px] game-frame">
+      <div className="mx-auto w-full grid grid-rows-[minmax(360px,_1fr)_auto] sm:grid-rows-[minmax(480px,_1fr)_auto] lg:grid-rows-[1fr] lg:grid-cols-[minmax(0,_1fr)_auto] lg:grow max-w-[1800px] xl:max-w-[2000px] min-h-[640px] lg:min-h-[720px] game-frame">
         {/* Game area */}
         <div className="relative overflow-hidden bg-brown-900" ref={gameWrapperRef}>
           <div className="absolute inset-0">
