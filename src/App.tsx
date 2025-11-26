@@ -15,13 +15,11 @@ import Button from './components/buttons/Button.tsx';
 import InteractButton from './components/buttons/InteractButton.tsx';
 import FreezeButton from './components/FreezeButton.tsx';
 import { MAX_HUMAN_PLAYERS } from '../convex/constants.ts';
-import PoweredByConvex from './components/PoweredByConvex.tsx';
 
 export default function Home() {
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between font-body game-background">
-      <PoweredByConvex />
 
       <ReactModal
         isOpen={helpModalOpen}
@@ -33,7 +31,7 @@ export default function Home() {
         <div className="font-body">
           <h1 className="text-center text-6xl font-bold font-display game-title">Help</h1>
           <p>
-            Welcome to AI town. AI town supports both anonymous <i>spectators</i> and logged in{' '}
+            Welcome to AI parliament. AI town supports both anonymous <i>spectators</i> and logged in{' '}
             <i>interactivity</i>.
           </p>
           <h2 className="text-4xl mt-4">Spectating</h2>
@@ -74,11 +72,11 @@ export default function Home() {
 
 +      <div className="w-full min-h-screen lg:h-screen relative isolate lg:p-8 shadow-2xl flex flex-col justify-start">
         <h1 className="mx-auto text-4xl p-3 sm:text-8xl lg:text-9xl font-bold font-display leading-none tracking-wide game-title w-full text-left sm:text-center sm:w-auto">
-          ParlOur
+          AI Parliament
         </h1>
 
         <div className="max-w-xs md:max-w-xl lg:max-w-none mx-auto my-4 text-center text-base sm:text-xl md:text-2xl text-white leading-tight shadow-solid">
-          Ask. Learn. Engage.
+          A virtual town where AI Parliament members live, chat and socialize.
           {/* <Unauthenticated>
             <div className="my-1.5 sm:my-0" />
             Log in to join the town

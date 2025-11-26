@@ -34,15 +34,15 @@ export const INVITE_ACCEPT_PROBABILITY = 1;
 export const INVITE_TIMEOUT = 60000;
 
 // Wait for another player to say something before jumping in.
-export const AWKWARD_CONVERSATION_TIMEOUT = 60_000; // more time locally
+export const AWKWARD_CONVERSATION_TIMEOUT = 24 * 60 * 60_000; // 24 hours - essentially infinity
 // export const AWKWARD_CONVERSATION_TIMEOUT = 20_000;
 
 // Leave a conversation after participating too long.
-export const MAX_CONVERSATION_DURATION = 10 * 60_000; // more time locally
+export const MAX_CONVERSATION_DURATION = 7 * 24 * 60 * 60_000; // 7 days - essentially infinity
 // export const MAX_CONVERSATION_DURATION = 2 * 60_000;
 
-// Leave a conversation if it has more than 8 messages;
-export const MAX_CONVERSATION_MESSAGES = 8;
+// Leave a conversation if it has more than this many messages;
+export const MAX_CONVERSATION_MESSAGES = 10000; // Essentially unlimited messages
 
 // Wait for 1s after sending an input to the engine. We can remove this
 // once we can await on an input being processed.
@@ -62,7 +62,7 @@ export const AGENT_WAKEUP_THRESHOLD = 1000;
 export const VACUUM_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000;
 export const DELETE_BATCH_SIZE = 64;
 
-export const HUMAN_IDLE_TOO_LONG = 5 * 60 * 1000;
+export const HUMAN_IDLE_TOO_LONG = 365 * 24 * 60 * 60 * 1000; // 365 days - essentially infinity (no despawn)
 
 export const ACTIVITIES = [
   { description: 'reading a book', emoji: '📖', duration: 60_000 },
@@ -76,3 +76,9 @@ export const ENGINE_ACTION_DURATION = 30000;
 export const MAX_PATHFINDS_PER_STEP = 16;
 
 export const DEFAULT_NAME = 'Me';
+
+// Web search configuration
+// NOTE: The local Convex backend doesn't support environment variables
+// For local development, change this constant to enable/disable web search
+// For production (Convex Cloud), this will be automatically set via ENABLE_WEB_SEARCH env var
+export const WEB_SEARCH_ENABLED_LOCAL = true;

@@ -126,7 +126,8 @@ export class Agent {
       }
       if (member.status.kind === 'walkingOver') {
         // Leave a conversation if we've been waiting for too long.
-        if (member.invited + INVITE_TIMEOUT < now) {
+        // Don't give up on invites from human players
+        if (!otherPlayer.human && member.invited + INVITE_TIMEOUT < now) {
           console.log(`Giving up on invite to ${otherPlayer.id}`);
           conversation.leave(game, now, player);
           return;
@@ -167,8 +168,8 @@ export class Agent {
         if (!conversation.lastMessage) {
           const isInitiator = conversation.creator === player.id;
           const awkwardDeadline = started + AWKWARD_CONVERSATION_TIMEOUT;
-          // Send the first message if we're the initiator or if we've been waiting for too long.
-          if (isInitiator || awkwardDeadline < now) {
+          // Send the first message if we're the initiator, if we've been waiting for too long, or if talking to a human
+          if (isInitiator || awkwardDeadline < now || otherPlayer.human) {
             // Grab the lock on the conversation and send a "start" message.
             console.log(`${player.id} initiating conversation with ${otherPlayer.id}.`);
             const messageUuid = crypto.randomUUID();
@@ -189,24 +190,32 @@ export class Agent {
           }
         }
         // See if the conversation has been going on too long and decide to leave.
-        const tooLongDeadline = started + MAX_CONVERSATION_DURATION;
-        if (tooLongDeadline < now || conversation.numMessages > MAX_CONVERSATION_MESSAGES) {
-          console.log(`${player.id} leaving conversation with ${otherPlayer.id}.`);
-          const messageUuid = crypto.randomUUID();
-          conversation.setIsTyping(now, player, messageUuid);
-          this.startOperation(game, now, 'agentGenerateMessage', {
-            worldId: game.worldId,
-            playerId: player.id,
-            agentId: this.id,
-            conversationId: conversation.id,
-            otherPlayerId: otherPlayer.id,
-            messageUuid,
-            type: 'leave',
-          });
-          return;
+        // Only apply timeout/message limits to agent-to-agent conversations, not conversations with humans
+        if (!otherPlayer.human) {
+          const tooLongDeadline = started + MAX_CONVERSATION_DURATION;
+          if (tooLongDeadline < now || conversation.numMessages > MAX_CONVERSATION_MESSAGES) {
+            console.log(`${player.id} leaving conversation with ${otherPlayer.id}.`);
+            const messageUuid = crypto.randomUUID();
+            conversation.setIsTyping(now, player, messageUuid);
+            this.startOperation(game, now, 'agentGenerateMessage', {
+              worldId: game.worldId,
+              playerId: player.id,
+              agentId: this.id,
+              conversationId: conversation.id,
+              otherPlayerId: otherPlayer.id,
+              messageUuid,
+              type: 'leave',
+            });
+            return;
+          }
         }
         // Wait for the awkward deadline if we sent the last message.
+        // For human conversations, wait indefinitely for their response
         if (conversation.lastMessage.author === player.id) {
+          if (otherPlayer.human) {
+            // Wait indefinitely for human response
+            return;
+          }
           const awkwardDeadline = conversation.lastMessage.timestamp + AWKWARD_CONVERSATION_TIMEOUT;
           if (now < awkwardDeadline) {
             return;
@@ -247,10 +256,10 @@ export class Agent {
       );
     }
     const operationId = game.allocId('operations');
-    console.log(`Agent ${this.id} starting operation ${name} (${operationId})`);
-    game.scheduleOperation(name, { operationId, ...args } as any);
+    console.log(`Agent ${this.id} starting operation ${String(name)} (${operationId})`);
+    game.scheduleOperation(String(name), { operationId, ...args } as any);
     this.inProgressOperation = {
-      name,
+      name: String(name),
       operationId,
       started: now,
     };

@@ -61,7 +61,7 @@ function apiUrl(path: string) {
 }
 
 function apiKey() {
-  return process.env.LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? "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";
+  return process.env.LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? "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";
 }
 
 const AuthHeaders = (): Record<string, string> =>
