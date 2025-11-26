@@ -40,11 +40,26 @@ just convex
 
 ## How It Works
 
-### Two-Step System
+### Four-Step Intelligent System
 
-1. **First Check**: When a user asks a question, the agent evaluates whether it needs external information
-2. **Conditional Search**: Only if the question is outside the agent's competencies, a web search is triggered
-3. **Smart Response**: The agent uses the web results to provide an accurate answer
+1. **Knowledge Gap Detection**: The agent evaluates whether it needs external information
+   - Personal/opinion questions: Can be answered from the agent's character
+   - Current/factual questions: Need web search
+   
+2. **Question Rewriting**: Before searching, the question is rewritten to be more specific to the agent's context
+   - Example: "What's the latest economic policy?" → "latest economic policy Armenia parliament Ruben Rubinyan 2024"
+   - Incorporates agent's NAME, role, country, and expertise
+   - Produces more targeted search results
+   
+3. **Web Search Execution**: The rewritten query is searched and results are retrieved
+
+4. **Post-Search Relevance Filtering** (NEW!): After getting results, an LLM determines if they're specifically about THIS agent
+   - Checks if results mention the agent by NAME
+   - Filters out generic results not directly about the agent
+   - Example: "Armenia economy" results → NOT RELEVANT unless they mention the agent
+   - Example: "Deputy Rubinyan's economic proposal" → RELEVANT (specifically about agent)
+   - **Only if relevant:** Results are summarized and integrated into response
+   - **All decisions logged** to Convex `relevanceLogs` database for tracking
 
 ### Fallback Mechanism
 
@@ -70,7 +85,17 @@ just convex run testWebSearch:quickTest
 
 # Test fallback detection
 just convex run testWebSearch:testFallbackDetection
+
+# Test relevance filtering
+just convex run testWebSearch:testRelevanceFiltering
+
+# Test question rewriting (NEW!)
+just convex run testWebSearch:testQuestionRewriting
 ```
+
+The relevance filtering test checks if questions like "What's the best pizza recipe?" are correctly filtered out as irrelevant to a parliamentary deputy's domain.
+
+The question rewriting test shows how questions are reformulated to be more specific to the agent's context (e.g., "What's the latest policy?" becomes "latest policy Armenia parliament 2024").
 
 ## Logs
 
@@ -80,8 +105,37 @@ When web search is disabled, you'll see:
 ```
 
 When enabled, you'll see detailed logs for:
-- Decision making (needs web search or not)
-- Search execution
-- Result filtering and summarization
-- Fallback triggers
+- ✅ Knowledge gap detection (needs web search or not)
+- 📝 Question rewriting (original → contextual with agent name)
+- 🔍 Search execution
+- 🎯 **Post-search relevance check** (are results about THIS agent?)
+- ⛔ Results filtered out as not agent-specific
+- 📊 Result summarization (only if relevant)
+- 🔄 Fallback triggers
+
+Example log flow for results that ARE about the agent:
+```
+[WebSearch] ✅ Question needs web search: true
+[WebSearch] 📝 Question rewritten:
+[WebSearch]    Original: "What are your foreign relations activities?"
+[WebSearch]    Rewritten: "Ruben Rubinyan foreign relations Armenia parliament 2024"
+[WebSearch] 🔍 Performing DuckDuckGo search...
+[WebSearch] 🎯 Results Relevance Check for Ruben Rubinyan:
+[WebSearch]    Decision: RELEVANT ✅
+[WebSearch]    Reasoning: Results directly mention and discuss Ruben Rubinyan's foreign relations work.
+[WebSearch] ✅ Web context successfully added to agent's knowledge
+```
+
+Example log flow for results that are NOT about the agent:
+```
+[WebSearch] ✅ Question needs web search: true
+[WebSearch] 📝 Question rewritten:
+[WebSearch]    Original: "What's the economic situation?"
+[WebSearch]    Rewritten: "Armenia economic situation parliament 2024 Ruben Rubinyan"
+[WebSearch] 🔍 Performing DuckDuckGo search...
+[WebSearch] 🎯 Results Relevance Check for Ruben Rubinyan:
+[WebSearch]    Decision: NOT RELEVANT ⛔
+[WebSearch]    Reasoning: Results about Armenia's economy generally, without specific mention of this deputy.
+[WebSearch] ⛔ Results not relevant to Ruben Rubinyan, skipping summarization
+```
 

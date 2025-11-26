@@ -9,6 +9,8 @@ import { GameId, conversationId, playerId } from '../aiTown/ids';
 import { NUM_MEMORIES_TO_SEARCH, WEB_SEARCH_ENABLED_LOCAL } from '../constants';
 import { moderateContent, getSafeResponse } from '../util/guardrails';
 import { performWebSearch, filterAndFormatResults } from '../util/webSearch';
+import { logWebSearch } from '../util/webSearchLogger';
+import { logRelevanceCheck } from '../util/relevanceLogger';
 
 const selfInternal = internal.agent.conversation;
 
@@ -68,6 +70,91 @@ function detectCannotAnswerResponse(response: string): boolean {
 }
 
 /**
+ * Determines if search results are relevant to the specific agent
+ * This runs AFTER getting search results to filter based on actual content
+ * @param searchResults The search results from web search
+ * @param agentName The agent's full name
+ * @param agentIdentity The agent's identity/expertise
+ * @param question The original user question
+ * @returns Object with relevance decision and reasoning
+ */
+async function areSearchResultsRelevantToAgent(
+  searchResults: Array<{ title: string; snippet: string; url: string }>,
+  agentName: string,
+  agentIdentity: string,
+  question: string
+): Promise<{ isRelevant: boolean; reasoning: string }> {
+  try {
+    // Format search results for LLM evaluation
+    const resultsText = searchResults.map((r, i) => 
+      `Result ${i + 1}:\nTitle: ${r.title}\nSnippet: ${r.snippet}\nURL: ${r.url}`
+    ).join('\n\n');
+    
+    const { content } = await chatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: `You are evaluating if web search results are directly relevant to a specific agent.
+
+Agent Name: ${agentName}
+Agent Identity: ${agentIdentity}
+User Question: "${question}"
+
+Search Results:
+${resultsText}
+
+Are these search results specifically about or directly relevant to ${agentName}?
+Consider:
+- Do the results mention ${agentName} by name?
+- Are the results about topics/events directly involving this specific person?
+- Are the results about the same organization/role but NOT about this specific person?
+
+Respond in this format:
+DECISION: RELEVANT or NOT_RELEVANT
+REASONING: Brief explanation (1-2 sentences)
+
+Example 1:
+Question: "Tell me about Ruben Rubinyan"
+Results mention "Ruben Rubinyan" and his work
+→ DECISION: RELEVANT
+REASONING: Results directly mention and discuss Ruben Rubinyan's activities.
+
+Example 2:
+Question: "What is the economic policy?"
+Results about "Armenia's economic policy" but don't mention the agent by name
+→ DECISION: NOT_RELEVANT
+REASONING: Results are about economic policy in general, not specifically about this agent.
+
+Now evaluate:`,
+        },
+      ],
+      max_tokens: 150,
+    });
+    
+    const lines = content.trim().split('\n');
+    const decisionLine = lines.find(l => l.startsWith('DECISION:'));
+    const reasoningLine = lines.find(l => l.startsWith('REASONING:'));
+    
+    const isRelevant = decisionLine?.toUpperCase().includes('RELEVANT') && 
+                      !decisionLine?.toUpperCase().includes('NOT_RELEVANT') || false;
+    const reasoning = reasoningLine?.replace('REASONING:', '').trim() || 'No reasoning provided';
+    
+    console.log(`[WebSearch] 🎯 Results Relevance Check for ${agentName}:`);
+    console.log(`[WebSearch]    Decision: ${isRelevant ? 'RELEVANT ✅' : 'NOT_RELEVANT ⛔'}`);
+    console.log(`[WebSearch]    Reasoning: ${reasoning}`);
+    
+    return { isRelevant, reasoning };
+  } catch (error) {
+    console.error('[WebSearch] Error checking results relevance:', error);
+    // Default to relevant to avoid losing valid information
+    return { 
+      isRelevant: true, 
+      reasoning: 'Error during relevance check, defaulting to relevant' 
+    };
+  }
+}
+
+/**
  * Determines if the agent needs web search to answer the question
  * @param question The user's question
  * @param agentIdentity The agent's identity/expertise
@@ -75,6 +162,7 @@ function detectCannotAnswerResponse(response: string): boolean {
  */
 async function needsWebSearch(question: string, agentIdentity: string): Promise<boolean> {
   try {
+    // Check if web search is needed (relevance will be checked after getting results)
     const { content } = await chatCompletion({
       messages: [
         {
@@ -85,18 +173,19 @@ Agent's identity and expertise: ${agentIdentity}
 
 User's question: "${question}"
 
-Can this agent answer this question based solely on their character, background, and general knowledge? 
+The question is relevant to the agent's domain. Now determine:
+Can this agent answer based solely on their character, background, and general knowledge? 
 Or do they need current web information, specific facts, or external data?
 
 Respond with ONLY "YES" if web search is needed, or "NO" if the agent can answer without it.
 
 Examples:
-- "What's your favorite food?" -> NO (personal question about the agent)
-- "What's the weather like?" -> YES (needs real-time data)
-- "Tell me about yourself" -> NO (about the agent)
-- "What's the population of France?" -> YES (needs factual data)
-- "How do you feel about politics?" -> NO (opinion based on character)
-- "What happened in the news today?" -> YES (needs current information)
+- "What's your stance on this issue?" -> NO (personal opinion)
+- "What's the latest unemployment rate?" -> YES (needs current data)
+- "Tell me about your background" -> NO (about the agent)
+- "What was decided in parliament yesterday?" -> YES (needs recent information)
+- "How do you approach policy?" -> NO (opinion based on character)
+- "What happened in the recent election?" -> YES (needs current information)
 
 Answer (YES or NO):`,
         },
@@ -105,12 +194,99 @@ Answer (YES or NO):`,
     });
     
     const needsSearch = content.trim().toUpperCase().includes('YES');
-    console.log(`[WebSearch] Question: "${question}" | Needs web search: ${needsSearch}`);
+    console.log(`[WebSearch] ✅ Question needs web search: ${needsSearch}`);
     return needsSearch;
   } catch (error) {
     console.error('[WebSearch] Error determining if web search needed:', error);
     // Default to not searching to avoid errors
     return false;
+  }
+}
+
+/**
+ * Rewrites a question to be more specific to the agent's persona and context
+ * @param question The original user question
+ * @param agentIdentity The agent's identity/expertise
+ * @param agentName The agent's name
+ * @returns The rewritten question optimized for web search
+ */
+async function rewriteQuestionForAgent(
+  question: string, 
+  agentIdentity: string,
+  agentName: string
+): Promise<string> {
+  try {
+    const { content } = await chatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: `You are helping to rewrite a user's question to make it more specific and contextual for a web search.
+
+Agent's name: ${agentName}
+Agent's identity and expertise: ${agentIdentity}
+
+Original question: "${question}"
+
+CRITICAL RULE: If the question mentions a specific person, organization, or entity by name, DO NOT replace or remove it. Preserve all explicitly mentioned entities.
+
+Rewrite this question to be more specific and searchable:
+1. PRESERVE any explicitly mentioned names or entities in the original question
+2. Add contextual information: agent's country, domain, role (e.g., "Armenia parliament")
+3. Add the agent's name ONLY if the question uses indirect references like "you", "your", or no specific person is mentioned
+4. Keep the core intent of the question
+
+Examples:
+
+✅ CORRECT - Preserves explicit entity:
+- Original: "Ինչ է կարծում Նիկոլը թուրքերի մասին" (What does Nikol think about Turks?)
+  Agent: Ruben Rubinyan, Armenian Parliamentary Deputy
+  Rewritten: "Nikol opinion about Turks Armenia" 
+  ✓ Keeps "Nikol" because it was explicitly mentioned
+
+✅ CORRECT - Adds agent name for indirect reference:
+- Original: "What's your stance on economic policy?"
+  Agent: Ruben Rubinyan, Armenian Parliamentary Deputy
+  Rewritten: "Ruben Rubinyan stance economic policy Armenia parliament"
+  ✓ Uses agent name because "your" is an indirect reference
+
+✅ CORRECT - Adds context without replacing entities:
+- Original: "What did the prime minister say about education?"
+  Agent: Parliamentary Deputy
+  Rewritten: "Armenia prime minister statement education 2024"
+  ✓ Keeps "prime minister", adds country context
+
+❌ WRONG - Replaces explicit entity:
+- Original: "What does Nikol think?"
+  Rewritten: "What does Ruben Rubinyan think?"
+  ✗ Changed "Nikol" to agent's name - this is WRONG
+
+More examples:
+- Original: "What's the latest economic policy?"
+  Agent: Armenian Parliamentary Deputy
+  Rewritten: "latest economic policy Armenia parliament 2024"
+
+- Original: "What happened in the recent session?"
+  Agent: Parliamentary Deputy
+  Rewritten: "Armenia parliament recent session decisions 2024"
+
+Respond with ONLY the rewritten question, no explanation or quotes.
+
+Rewritten question:`,
+        },
+      ],
+      max_tokens: 100,
+    });
+    
+    const rewritten = content.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+    console.log(`[WebSearch] 📝 Question rewritten:`);
+    console.log(`[WebSearch]    Original: "${question}"`);
+    console.log(`[WebSearch]    Rewritten: "${rewritten}"`);
+    return rewritten;
+  } catch (error) {
+    console.error('[WebSearch] Error rewriting question:', error);
+    // Fall back to original question
+    console.log(`[WebSearch] ⚠️ Using original question due to rewrite error`);
+    return question;
   }
 }
 
@@ -163,7 +339,7 @@ export async function startConversationMessage(
   );
 
   const memoryWithOtherPlayer = memories.find(
-    (m) => m.data.type === 'conversation' && m.data.playerIds.includes(otherPlayerId),
+    (m: any) => m.data.type === 'conversation' && m.data.playerIds.includes(otherPlayerId),
   );
   
   // Two-step system: First check if web search is needed
@@ -175,6 +351,7 @@ export async function startConversationMessage(
     console.log(`[WebSearch] Agent: ${player.name}`);
     console.log(`[WebSearch] User question: "${lastOtherPlayerMessage.text}"`);
     
+    const searchStartTime = Date.now();
     try {
       const shouldSearch = await needsWebSearch(
         lastOtherPlayerMessage.text,
@@ -184,24 +361,94 @@ export async function startConversationMessage(
       if (shouldSearch) {
         console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
         console.log(`[WebSearch] 🌐 Initiating web search...`);
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
-        webSearchContext = await filterAndFormatResults(
+        
+        // Rewrite the question to be more specific to the agent's context
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
+        const searchDuration = Date.now() - searchStartTime;
+        
+        // Check if search results are relevant to this specific agent
+        const relevanceCheck = await areSearchResultsRelevantToAgent(
           searchResults,
+          player.name,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
-        if (webSearchContext) {
-          console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
+        
+        // Log the relevance decision
+        await logRelevanceCheck(ctx, {
+          timestamp: searchStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults: searchResults.map(r => ({
+            title: r.title,
+            url: r.url,
+            snippet: r.snippet
+          })),
+          decision: relevanceCheck.isRelevant ? 'RELEVANT' : 'NOT_RELEVANT',
+          reasoning: relevanceCheck.reasoning,
+          rewrittenQuestion: rewrittenQuestion,
+        });
+        
+        // Only summarize if results are relevant
+        if (relevanceCheck.isRelevant) {
+          webSearchContext = await filterAndFormatResults(
+            searchResults,
+            agent?.identity || '',
+            lastOtherPlayerMessage.text
+          );
+          
+          if (webSearchContext) {
+            console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
+          } else {
+            console.log(`[WebSearch] ⚠️ No usable web context found`);
+          }
         } else {
-          console.log(`[WebSearch] ⚠️ No usable web context found`);
+          console.log(`[WebSearch] ⛔ Results not relevant to ${player.name}, skipping summarization`);
+          webSearchContext = '';
         }
+        
+        // Log the web search
+        await logWebSearch(ctx, {
+          timestamp: searchStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0 && relevanceCheck.isRelevant,
+          duration: searchDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'proactive',
+        });
       } else {
         console.log(`[WebSearch] ❌ DECISION: Web search NOT needed (within agent's competencies)`);
         console.log(`[WebSearch] 💭 Agent will answer based on character knowledge`);
       }
     } catch (error) {
+      const searchDuration = Date.now() - searchStartTime;
       console.error(`[WebSearch] ❌ Web search failed:`, error);
       console.error(`[WebSearch] Continuing without web context`);
+      
+      // Log the failed search
+      await logWebSearch(ctx, {
+        timestamp: searchStartTime,
+        question: lastOtherPlayerMessage.text,
+        agentName: player.name,
+        agentIdentity: agent?.identity,
+        searchResults: [],
+        success: false,
+        duration: searchDuration,
+        resultCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+        triggerType: 'proactive',
+      });
     }
     console.log(`${'='.repeat(80)}\n`);
   } else if (!isWebSearchEnabled() && lastOtherPlayerMessage) {
@@ -244,14 +491,68 @@ export async function startConversationMessage(
     console.log(`[WebSearch] Response preview: "${content.slice(0, 100)}..."`);
     console.log(`[WebSearch] 🌐 Retrying with web search...`);
     
+    const fallbackStartTime = Date.now();
     try {
       if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
-        webSearchContext = await filterAndFormatResults(
+        // Rewrite the question for better search results
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
+        const fallbackDuration = Date.now() - fallbackStartTime;
+        
+        // Check if search results are relevant to this specific agent
+        const relevanceCheck = await areSearchResultsRelevantToAgent(
           searchResults,
+          player.name,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
+        
+        // Log the relevance decision
+        await logRelevanceCheck(ctx, {
+          timestamp: fallbackStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults: searchResults.map(r => ({
+            title: r.title,
+            url: r.url,
+            snippet: r.snippet
+          })),
+          decision: relevanceCheck.isRelevant ? 'RELEVANT' : 'NOT_RELEVANT',
+          reasoning: relevanceCheck.reasoning,
+          rewrittenQuestion: rewrittenQuestion,
+        });
+        
+        // Only summarize if results are relevant
+        if (relevanceCheck.isRelevant) {
+          webSearchContext = await filterAndFormatResults(
+            searchResults,
+            agent?.identity || '',
+            lastOtherPlayerMessage.text
+          );
+        } else {
+          console.log(`[WebSearch] ⛔ Fallback results not relevant to ${player.name}, skipping summarization`);
+          webSearchContext = '';
+        }
+        
+        // Log the fallback web search
+        await logWebSearch(ctx, {
+          timestamp: fallbackStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0 && relevanceCheck.isRelevant && !!webSearchContext,
+          duration: fallbackDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'fallback',
+        });
         
         if (webSearchContext) {
           console.log(`[WebSearch] ✅ Web context obtained, regenerating response...`);
@@ -362,6 +663,7 @@ export async function continueConversationMessage(
     console.log(`[WebSearch] Agent: ${player.name}`);
     console.log(`[WebSearch] User question: "${lastOtherPlayerMessage.text}"`);
     
+    const searchStartTime = Date.now();
     try {
       const shouldSearch = await needsWebSearch(
         lastOtherPlayerMessage.text,
@@ -371,24 +673,94 @@ export async function continueConversationMessage(
       if (shouldSearch) {
         console.log(`[WebSearch] ✅ DECISION: Web search REQUIRED (outside agent's competencies)`);
         console.log(`[WebSearch] 🌐 Initiating web search...`);
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
-        webSearchContext = await filterAndFormatResults(
+        
+        // Rewrite the question to be more specific to the agent's context
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
+        const searchDuration = Date.now() - searchStartTime;
+        
+        // Check if search results are relevant to this specific agent
+        const relevanceCheck = await areSearchResultsRelevantToAgent(
           searchResults,
+          player.name,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
-        if (webSearchContext) {
-          console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
+        
+        // Log the relevance decision
+        await logRelevanceCheck(ctx, {
+          timestamp: searchStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults: searchResults.map(r => ({
+            title: r.title,
+            url: r.url,
+            snippet: r.snippet
+          })),
+          decision: relevanceCheck.isRelevant ? 'RELEVANT' : 'NOT_RELEVANT',
+          reasoning: relevanceCheck.reasoning,
+          rewrittenQuestion: rewrittenQuestion,
+        });
+        
+        // Only summarize if results are relevant
+        if (relevanceCheck.isRelevant) {
+          webSearchContext = await filterAndFormatResults(
+            searchResults,
+            agent?.identity || '',
+            lastOtherPlayerMessage.text
+          );
+          
+          if (webSearchContext) {
+            console.log(`[WebSearch] ✅ Web context successfully added to agent's knowledge`);
+          } else {
+            console.log(`[WebSearch] ⚠️ No usable web context found`);
+          }
         } else {
-          console.log(`[WebSearch] ⚠️ No usable web context found`);
+          console.log(`[WebSearch] ⛔ Results not relevant to ${player.name}, skipping summarization`);
+          webSearchContext = '';
         }
+        
+        // Log the web search
+        await logWebSearch(ctx, {
+          timestamp: searchStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0 && relevanceCheck.isRelevant,
+          duration: searchDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'proactive',
+        });
       } else {
         console.log(`[WebSearch] ❌ DECISION: Web search NOT needed (within agent's competencies)`);
         console.log(`[WebSearch] 💭 Agent will answer based on character knowledge`);
       }
     } catch (error) {
+      const searchDuration = Date.now() - searchStartTime;
       console.error(`[WebSearch] ❌ Web search failed:`, error);
       console.error(`[WebSearch] Continuing without web context`);
+      
+      // Log the failed search
+      await logWebSearch(ctx, {
+        timestamp: searchStartTime,
+        question: lastOtherPlayerMessage.text,
+        agentName: player.name,
+        agentIdentity: agent?.identity,
+        searchResults: [],
+        success: false,
+        duration: searchDuration,
+        resultCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+        triggerType: 'proactive',
+      });
     }
     console.log(`${'='.repeat(80)}\n`);
   } else if (!isWebSearchEnabled() && lastOtherPlayerMessage) {
@@ -439,14 +811,68 @@ export async function continueConversationMessage(
     console.log(`[WebSearch] Response preview: "${content.slice(0, 100)}..."`);
     console.log(`[WebSearch] 🌐 Retrying with web search...`);
     
+    const fallbackStartTime = Date.now();
     try {
       if (lastOtherPlayerMessage && lastOtherPlayerMessage.text) {
-        const searchResults = await performWebSearch(lastOtherPlayerMessage.text);
-        webSearchContext = await filterAndFormatResults(
+        // Rewrite the question for better search results
+        const rewrittenQuestion = await rewriteQuestionForAgent(
+          lastOtherPlayerMessage.text,
+          agent?.identity || '',
+          player.name
+        );
+        
+        const searchResults = await performWebSearch(rewrittenQuestion);
+        const fallbackDuration = Date.now() - fallbackStartTime;
+        
+        // Check if search results are relevant to this specific agent
+        const relevanceCheck = await areSearchResultsRelevantToAgent(
           searchResults,
+          player.name,
           agent?.identity || '',
           lastOtherPlayerMessage.text
         );
+        
+        // Log the relevance decision
+        await logRelevanceCheck(ctx, {
+          timestamp: fallbackStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults: searchResults.map(r => ({
+            title: r.title,
+            url: r.url,
+            snippet: r.snippet
+          })),
+          decision: relevanceCheck.isRelevant ? 'RELEVANT' : 'NOT_RELEVANT',
+          reasoning: relevanceCheck.reasoning,
+          rewrittenQuestion: rewrittenQuestion,
+        });
+        
+        // Only summarize if results are relevant
+        if (relevanceCheck.isRelevant) {
+          webSearchContext = await filterAndFormatResults(
+            searchResults,
+            agent?.identity || '',
+            lastOtherPlayerMessage.text
+          );
+        } else {
+          console.log(`[WebSearch] ⛔ Fallback results not relevant to ${player.name}, skipping summarization`);
+          webSearchContext = '';
+        }
+        
+        // Log the fallback web search
+        await logWebSearch(ctx, {
+          timestamp: fallbackStartTime,
+          question: lastOtherPlayerMessage.text,
+          agentName: player.name,
+          agentIdentity: agent?.identity,
+          searchResults,
+          success: searchResults.length > 0 && relevanceCheck.isRelevant && !!webSearchContext,
+          duration: fallbackDuration,
+          resultCount: searchResults.length,
+          formattedContext: webSearchContext || undefined,
+          triggerType: 'fallback',
+        });
         
         if (webSearchContext) {
           console.log(`[WebSearch] ✅ Web context obtained, regenerating response...`);

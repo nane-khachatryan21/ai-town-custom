@@ -15,11 +15,13 @@ import Button from './components/buttons/Button.tsx';
 import InteractButton from './components/buttons/InteractButton.tsx';
 import FreezeButton from './components/FreezeButton.tsx';
 import { MAX_HUMAN_PLAYERS } from '../convex/constants.ts';
+import PoweredByConvex from './components/PoweredByConvex.tsx';
 
 export default function Home() {
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between font-body">
+    <main className="relative flex min-h-screen flex-col items-center justify-between font-body game-background">
+      <PoweredByConvex />
 
       <ReactModal
         isOpen={helpModalOpen}
@@ -31,7 +33,7 @@ export default function Home() {
         <div className="font-body">
           <h1 className="text-center text-6xl font-bold font-display game-title">Help</h1>
           <p>
-            Welcome to AI parliament. AI town supports both anonymous <i>spectators</i> and logged in{' '}
+            Welcome to AI town. AI town supports both anonymous <i>spectators</i> and logged in{' '}
             <i>interactivity</i>.
           </p>
           <h2 className="text-4xl mt-4">Spectating</h2>

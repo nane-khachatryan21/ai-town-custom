@@ -170,4 +170,4 @@ export const characters = deputyEntries.map(([name, data], index) => {
 
 
 // Characters move at 0.75 tiles per second.
-export const movementSpeed = 1.5;
+export const movementSpeed = 1;
