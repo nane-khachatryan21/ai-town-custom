@@ -6,6 +6,8 @@ import { data as f5SpritesheetData } from './spritesheets/f5';
 import { data as f6SpritesheetData } from './spritesheets/f6';
 import { data as f7SpritesheetData } from './spritesheets/f7';
 import { data as f8SpritesheetData } from './spritesheets/f8';
+import { data as f9SpritesheetData } from './spritesheets/f9';
+import { data as f10SpritesheetData } from './spritesheets/f10';
 import deputyData from '../prompts_deputies.json';
 
 // console.log('Loaded deputyData:', deputyData);
@@ -142,9 +144,11 @@ const availableCharacters = [
   { name: 'f6', data: f6SpritesheetData },
   { name: 'f7', data: f7SpritesheetData },
   { name: 'f8', data: f8SpritesheetData },
+  { name: 'f9', data: f9SpritesheetData },
+  { name: 'f10', data: f10SpritesheetData },
 ];
 
-const deputyEntries = Object.entries(deputyData).slice(0, 8);
+const deputyEntries = Object.entries(deputyData).slice(0, 10);
 
 console.log(`Loading ${deputyEntries.length} characters...`);
 
